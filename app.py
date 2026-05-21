@@ -1,4 +1,9 @@
 # =========================================================
+# CENTRO INTELIGENCIA PREDICTIVA TERRITORIAL
+# VERSION ESTABLE CONSOLIDADA
+# =========================================================
+
+# =========================================================
 # IMPORTS
 # =========================================================
 
@@ -7,6 +12,7 @@ import pandas as pd
 import numpy as np
 
 import plotly.express as px
+import plotly.graph_objects as go
 
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
@@ -28,7 +34,7 @@ st.set_page_config(
 )
 
 # =========================================================
-# ESTILO
+# ESTILO VISUAL
 # =========================================================
 
 st.markdown("""
@@ -46,6 +52,10 @@ h1, h2, h3 {
 
 [data-testid="stMetricValue"] {
     color: #58a6ff;
+}
+
+section[data-testid="stSidebar"] {
+    background-color: #161b22;
 }
 
 </style>
@@ -86,7 +96,7 @@ def leer_csv_seguro(ruta):
 
 def limpiar_columnas(df):
 
-    nuevas = []
+    columnas = []
 
     for col in df.columns:
 
@@ -98,14 +108,14 @@ def limpiar_columnas(df):
             .replace("-", "_")
         )
 
-        nuevas.append(col)
+        columnas.append(col)
 
-    df.columns = nuevas
+    df.columns = columnas
 
     return df
 
 # =========================================================
-# CARGAR DATOS
+# CARGA BASES
 # =========================================================
 
 @st.cache_data
@@ -176,6 +186,24 @@ COL_ACTIVIDAD = detectar_columna(
     df_op
 )
 
+COL_AFECTACION = detectar_columna(
+
+    [
+        'TIPO_DE_AFECTACION',
+        'TIPO_DE_AFECTACIÓN'
+    ],
+
+    df_op
+)
+
+# =========================================================
+# VALIDAR EXISTENCIA COLUMNAS
+# =========================================================
+
+def existe(col):
+
+    return col in df.columns
+
 # =========================================================
 # SIDEBAR
 # =========================================================
@@ -184,11 +212,15 @@ st.sidebar.title(
     "Filtros Estratégicos"
 )
 
+# =========================================================
+# FILTROS
+# =========================================================
+
 dep_sel = []
 mun_sel = []
 anio_sel = []
 
-if 'DEPARTAMENTO' in df.columns:
+if existe('DEPARTAMENTO'):
 
     dep_sel = st.sidebar.multiselect(
 
@@ -201,7 +233,7 @@ if 'DEPARTAMENTO' in df.columns:
         )
     )
 
-if 'MUNICIPIO' in df.columns:
+if existe('MUNICIPIO'):
 
     mun_sel = st.sidebar.multiselect(
 
@@ -214,7 +246,7 @@ if 'MUNICIPIO' in df.columns:
         )
     )
 
-if 'AÑO' in df.columns:
+if existe('AÑO'):
 
     anio_sel = st.sidebar.multiselect(
 
@@ -228,7 +260,7 @@ if 'AÑO' in df.columns:
     )
 
 # =========================================================
-# FILTRADO
+# FILTRAR DATAFRAME
 # =========================================================
 
 df_filtrado = df.copy()
@@ -255,49 +287,40 @@ if anio_sel:
     ]
 
 # =========================================================
-# VALIDAR COLUMNAS
+# VALIDAR COLUMNAS EN FILTRADO
 # =========================================================
 
-def existe(col):
+def existe_filtrado(col):
 
     return col in df_filtrado.columns
 
 # =========================================================
-# CREAR IPE
+# CREAR INDICES
 # =========================================================
 
-columnas_ipe = [
+if all(
 
-    'RIESGO',
+    existe_filtrado(col)
 
-    'IET',
+    for col in [
 
-    'EVENTOS',
-
-    'UNIDADES_EXPUESTAS',
-
-    'GAO_PRESENTES'
-]
-
-if all(existe(col) for col in columnas_ipe):
+        'RIESGO',
+        'IET',
+        'EVENTOS',
+        'UNIDADES_EXPUESTAS',
+        'GAO_PRESENTES'
+    ]
+):
 
     df_filtrado['IPE'] = (
 
-        df_filtrado['RIESGO'] * 0.30
+        df_filtrado['RIESGO'] * 0.30 +
 
-        +
+        df_filtrado['IET'] * 0.25 +
 
-        df_filtrado['IET'] * 0.25
+        df_filtrado['EVENTOS'] * 0.20 +
 
-        +
-
-        df_filtrado['EVENTOS'] * 0.20
-
-        +
-
-        df_filtrado['UNIDADES_EXPUESTAS'] * 0.15
-
-        +
+        df_filtrado['UNIDADES_EXPUESTAS'] * 0.15 +
 
         df_filtrado['GAO_PRESENTES'] * 0.10
     )
@@ -307,24 +330,29 @@ else:
     df_filtrado['IPE'] = 0
 
 # =========================================================
-# CREAR IPO
+# IPO
 # =========================================================
 
-if all(existe(col) for col in columnas_ipe):
+if all(
+
+    existe_filtrado(col)
+
+    for col in [
+
+        'EVENTOS',
+        'GAO_PRESENTES',
+        'UNIDADES_EXPUESTAS',
+        'RIESGO'
+    ]
+):
 
     df_filtrado['IPO'] = (
 
-        df_filtrado['EVENTOS'] * 0.35
+        df_filtrado['EVENTOS'] * 0.35 +
 
-        +
+        df_filtrado['GAO_PRESENTES'] * 0.25 +
 
-        df_filtrado['GAO_PRESENTES'] * 0.25
-
-        +
-
-        df_filtrado['UNIDADES_EXPUESTAS'] * 0.20
-
-        +
+        df_filtrado['UNIDADES_EXPUESTAS'] * 0.20 +
 
         df_filtrado['RIESGO'] * 0.20
     )
@@ -334,29 +362,21 @@ else:
     df_filtrado['IPO'] = 0
 
 # =========================================================
-# CREAR IGE
+# IGE
 # =========================================================
 
-if all(existe(col) for col in ['IPE', 'IPO']):
+df_filtrado['IGE'] = (
 
-    df_filtrado['IGE'] = (
+    df_filtrado['IPE'] * 0.60 +
 
-        df_filtrado['IPE'] * 0.60
-
-        +
-
-        df_filtrado['IPO'] * 0.40
-    )
-
-else:
-
-    df_filtrado['IGE'] = 0
+    df_filtrado['IPO'] * 0.40
+)
 
 # =========================================================
 # SEMAFORIZACIÓN
 # =========================================================
 
-def clasificar_riesgo(valor):
+def semaforo(valor):
 
     if valor >= 25:
         return "CRITICO"
@@ -372,7 +392,7 @@ def clasificar_riesgo(valor):
 
 df_filtrado['SEMAFORO'] = df_filtrado[
     'IGE'
-].apply(clasificar_riesgo)
+].apply(semaforo)
 
 # =========================================================
 # TITULO
@@ -389,10 +409,12 @@ st.markdown("""
 - Inteligencia Estratégica
 - Prospectiva Territorial
 - IA Predictiva
-- Detección de Anomalías
 - Inteligencia Operacional
+- Riesgo Territorial
+- Clustering Territorial
+- Detección de Anomalías
 - Priorización Estratégica
-- Riesgo Geoestratégico
+- Alertas Tempranas
 
 """)
 
@@ -404,11 +426,11 @@ st.subheader(
     "Indicadores Estratégicos"
 )
 
-c1, c2, c3, c4, c5 = st.columns(5)
+c1, c2, c3, c4, c5, c6 = st.columns(6)
 
 c1.metric(
     "Municipios",
-    df_filtrado['MUNICIPIO'].nunique()
+    int(df_filtrado['MUNICIPIO'].nunique())
 )
 
 c2.metric(
@@ -417,22 +439,27 @@ c2.metric(
 )
 
 c3.metric(
+    "Riesgo",
+    round(df_filtrado['RIESGO'].mean(), 2)
+)
+
+c4.metric(
     "IPE",
     round(df_filtrado['IPE'].mean(), 2)
 )
 
-c4.metric(
+c5.metric(
     "IPO",
     round(df_filtrado['IPO'].mean(), 2)
 )
 
-c5.metric(
+c6.metric(
     "IGE",
     round(df_filtrado['IGE'].mean(), 2)
 )
 
 # =========================================================
-# PRIORIZACIÓN
+# MUNICIPIOS PRIORITARIOS
 # =========================================================
 
 st.subheader(
@@ -440,8 +467,9 @@ st.subheader(
 )
 
 prioridad = df_filtrado.groupby(
-    'MUNICIPIO'
-)['IGE'].mean().reset_index()
+    'MUNICIPIO',
+    as_index=False
+)['IGE'].mean()
 
 prioridad = prioridad.sort_values(
     by='IGE',
@@ -467,10 +495,19 @@ st.plotly_chart(
 )
 
 # =========================================================
-# MAPA
+# MAPA GEOESTRATÉGICO
 # =========================================================
 
-if existe('LATITUD') and existe('LONGITUD'):
+if all(
+
+    existe_filtrado(col)
+
+    for col in [
+
+        'LATITUD',
+        'LONGITUD'
+    ]
+):
 
     st.subheader(
         "Mapa Geoestratégico"
@@ -482,15 +519,16 @@ if existe('LATITUD') and existe('LONGITUD'):
             'MUNICIPIO',
             'LATITUD',
             'LONGITUD'
-        ]
+        ],
+
+        as_index=False
 
     ).agg({
 
         'IGE':'mean',
 
         'EVENTOS':'sum'
-
-    }).reset_index()
+    })
 
     fig_map = px.scatter_mapbox(
 
@@ -523,27 +561,92 @@ if existe('LATITUD') and existe('LONGITUD'):
     )
 
 # =========================================================
+# EVOLUCIÓN TEMPORAL
+# =========================================================
+
+if all(
+
+    existe_filtrado(col)
+
+    for col in [
+
+        'SEMANA',
+        'EVENTOS'
+    ]
+):
+
+    st.subheader(
+        "Evolución Temporal"
+    )
+
+    temporal = df_filtrado.groupby(
+        'SEMANA',
+        as_index=False
+    )['EVENTOS'].sum()
+
+    fig_temp = px.line(
+
+        temporal,
+
+        x='SEMANA',
+
+        y='EVENTOS',
+
+        markers=True
+    )
+
+    st.plotly_chart(
+        fig_temp,
+        use_container_width=True
+    )
+
+# =========================================================
+# ALERTAS
+# =========================================================
+
+st.subheader(
+    "Alertas Estratégicas"
+)
+
+alertas = df_filtrado.groupby(
+    'MUNICIPIO',
+    as_index=False
+)['IGE'].mean()
+
+alertas['ALERTA'] = alertas['IGE'].apply(
+    semaforo
+)
+
+st.dataframe(
+    alertas.sort_values(
+        by='IGE',
+        ascending=False
+    ).head(30),
+    use_container_width=True
+)
+
+# =========================================================
 # IA PREDICTIVA
 # =========================================================
 
 features = [
 
     'FREQ_HISTORICA',
-
     'DIV_TACTICA',
-
     'GAO_PRESENTES',
-
     'UNIDADES_EXPUESTAS',
-
     'IET',
-
     'RIESGO'
 ]
 
 target = 'EVENTO_FUTURO'
 
-if all(existe(col) for col in features + [target]):
+if all(
+
+    existe_filtrado(col)
+
+    for col in features + [target]
+):
 
     st.subheader(
         "Motor IA Predictiva"
@@ -596,6 +699,47 @@ if all(existe(col) for col in features + [target]):
             round(acc, 3)
         )
 
+        probabilidades = modelo.predict_proba(X)[:,1]
+
+        modelo_df['RIESGO_PREDICTIVO'] = (
+
+            probabilidades * 100
+        )
+
+        predicciones = df_filtrado.loc[
+            modelo_df.index
+        ].copy()
+
+        predicciones['RIESGO_PREDICTIVO'] = (
+            modelo_df['RIESGO_PREDICTIVO']
+        )
+
+        top_pred = predicciones.groupby(
+            'MUNICIPIO',
+            as_index=False
+        )['RIESGO_PREDICTIVO'].mean()
+
+        fig_pred = px.bar(
+
+            top_pred.sort_values(
+                by='RIESGO_PREDICTIVO',
+                ascending=False
+            ).head(20),
+
+            x='MUNICIPIO',
+
+            y='RIESGO_PREDICTIVO',
+
+            color='RIESGO_PREDICTIVO',
+
+            color_continuous_scale='Turbo'
+        )
+
+        st.plotly_chart(
+            fig_pred,
+            use_container_width=True
+        )
+
 # =========================================================
 # ANOMALÍAS
 # =========================================================
@@ -603,17 +747,18 @@ if all(existe(col) for col in features + [target]):
 anomalias_cols = [
 
     'EVENTOS',
-
     'RIESGO',
-
     'IET',
-
     'GAO_PRESENTES',
-
     'UNIDADES_EXPUESTAS'
 ]
 
-if all(existe(col) for col in anomalias_cols):
+if all(
+
+    existe_filtrado(col)
+
+    for col in anomalias_cols
+):
 
     st.subheader(
         "Anomalías Estratégicas"
@@ -675,15 +820,17 @@ if all(existe(col) for col in anomalias_cols):
 cluster_cols = [
 
     'RIESGO',
-
     'EVENTOS',
-
     'IET',
-
     'GAO_PRESENTES'
 ]
 
-if all(existe(col) for col in cluster_cols):
+if all(
+
+    existe_filtrado(col)
+
+    for col in cluster_cols
+):
 
     st.subheader(
         "Clustering Territorial"
@@ -743,14 +890,14 @@ if COL_GAO and COL_ACTIVIDAD:
     )
 
     org = df_op.groupby(
-        COL_GAO
+        COL_GAO,
+        as_index=False
     ).agg({
 
         'MUNICIPIO':'nunique',
 
         COL_ACTIVIDAD:'nunique'
-
-    }).reset_index()
+    })
 
     org.columns = [
 
@@ -763,9 +910,7 @@ if COL_GAO and COL_ACTIVIDAD:
 
     org['ADAPTACION'] = (
 
-        org['EXPANSION'] * 0.5
-
-        +
+        org['EXPANSION'] * 0.5 +
 
         org['TACTICAS'] * 0.5
     )
@@ -796,7 +941,17 @@ if COL_GAO and COL_ACTIVIDAD:
 # MATRIZ ESTRATÉGICA
 # =========================================================
 
-if all(existe(col) for col in ['RIESGO', 'EVENTOS', 'IET']):
+if all(
+
+    existe_filtrado(col)
+
+    for col in [
+
+        'RIESGO',
+        'EVENTOS',
+        'IET'
+    ]
+):
 
     st.subheader(
         "Matriz Estratégica"
@@ -821,7 +976,67 @@ if all(existe(col) for col in ['RIESGO', 'EVENTOS', 'IET']):
     )
 
 # =========================================================
-# TABLA FINAL
+# MUNICIPIOS EMERGENTES
+# =========================================================
+
+if all(
+
+    existe_filtrado(col)
+
+    for col in [
+
+        'RIESGO',
+        'EVENTOS',
+        'MUNICIPIO'
+    ]
+):
+
+    st.subheader(
+        "Municipios Emergentes"
+    )
+
+    emergentes = df_filtrado.groupby(
+        'MUNICIPIO',
+        as_index=False
+    ).agg({
+
+        'RIESGO':'mean',
+
+        'EVENTOS':'sum'
+    })
+
+    emergentes['INDICE_EMERGENTE'] = (
+
+        emergentes['RIESGO'] * 0.6 +
+
+        emergentes['EVENTOS'] * 0.4
+    )
+
+    emergentes = emergentes.sort_values(
+        by='INDICE_EMERGENTE',
+        ascending=False
+    )
+
+    fig_emerg = px.bar(
+
+        emergentes.head(20),
+
+        x='MUNICIPIO',
+
+        y='INDICE_EMERGENTE',
+
+        color='INDICE_EMERGENTE',
+
+        color_continuous_scale='Turbo'
+    )
+
+    st.plotly_chart(
+        fig_emerg,
+        use_container_width=True
+    )
+
+# =========================================================
+# VISTA CONSOLIDADA
 # =========================================================
 
 st.subheader(
