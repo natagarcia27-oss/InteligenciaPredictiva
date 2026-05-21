@@ -3,6 +3,10 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score
+from xgboost import XGBClassifier
+
 # =========================================================
 # CONFIGURACIÓN GENERAL
 # =========================================================
@@ -279,6 +283,7 @@ st.markdown("""
 - Corredores Críticos
 - Alertas Tempranas
 - Simulación Prospectiva
+- IA Predictiva
 """)
 
 # =========================================================
@@ -895,6 +900,147 @@ st.plotly_chart(
     fig_future,
     use_container_width=True
 )
+
+# =========================================================
+# MOTOR PREDICTIVO IA
+# =========================================================
+
+st.subheader(
+    "Motor Predictivo IA"
+)
+
+features = [
+
+    'FREQ_HISTORICA',
+
+    'DIV_TACTICA',
+
+    'GAO_PRESENTES',
+
+    'UNIDADES_EXPUESTAS',
+
+    'IET',
+
+    'RIESGO'
+]
+
+target = 'EVENTO_FUTURO'
+
+validas = True
+
+for col in features + [target]:
+
+    if col not in df_filtrado.columns:
+
+        validas = False
+
+if validas:
+
+    modelo_df = df_filtrado[
+        features + [target]
+    ].dropna()
+
+    X = modelo_df[features]
+
+    y = modelo_df[target]
+
+    X_train, X_test, y_train, y_test = train_test_split(
+
+        X,
+        y,
+
+        test_size=0.2,
+
+        random_state=42
+    )
+
+    modelo = XGBClassifier(
+
+        n_estimators=100,
+
+        max_depth=4,
+
+        learning_rate=0.1,
+
+        subsample=0.8,
+
+        colsample_bytree=0.8,
+
+        eval_metric='logloss'
+    )
+
+    modelo.fit(
+        X_train,
+        y_train
+    )
+
+    pred = modelo.predict(X_test)
+
+    acc = accuracy_score(
+        y_test,
+        pred
+    )
+
+    st.metric(
+        "Precisión Modelo IA",
+        round(acc, 3)
+    )
+
+    probabilidades = modelo.predict_proba(X)[:,1]
+
+    modelo_df['PROBABILIDAD_ATAQUE'] = probabilidades
+
+    modelo_df['RIESGO_PREDICTIVO'] = (
+
+        modelo_df['PROBABILIDAD_ATAQUE'] * 100
+    )
+
+    predicciones = df_filtrado.copy()
+
+    predicciones = predicciones.loc[
+        modelo_df.index
+    ]
+
+    predicciones['RIESGO_PREDICTIVO'] = (
+
+        modelo_df['RIESGO_PREDICTIVO']
+    )
+
+    top_pred = predicciones.groupby(
+        'MUNICIPIO'
+    )['RIESGO_PREDICTIVO'].mean().reset_index()
+
+    top_pred = top_pred.sort_values(
+
+        by='RIESGO_PREDICTIVO',
+
+        ascending=False
+    )
+
+    st.dataframe(
+        top_pred.head(30),
+        use_container_width=True
+    )
+
+    fig_pred = px.bar(
+
+        top_pred.head(20),
+
+        x='MUNICIPIO',
+
+        y='RIESGO_PREDICTIVO',
+
+        color='RIESGO_PREDICTIVO',
+
+        color_continuous_scale='Reds',
+
+        title='Probabilidad Predictiva de Ataque'
+    )
+
+    st.plotly_chart(
+        fig_pred,
+        use_container_width=True
+    )
 
 # =========================================================
 # TABLA FINAL
