@@ -347,7 +347,115 @@ if 'LATITUD' in df_filtrado.columns and 'LONGITUD' in df_filtrado.columns:
         fig_map,
         use_container_width=True
     )
+# ==================================================
+# ALERTAS TEMPRANAS
+# ==================================================
 
+st.subheader(
+    "Alertas Estratégicas"
+)
+
+# --------------------------------------
+# CREAR ÍNDICE PRESIÓN TERRITORIAL
+# --------------------------------------
+
+df_alertas = df_filtrado.copy()
+
+if 'IET' in df_alertas.columns:
+
+    df_alertas['IPT'] = (
+
+        df_alertas['RIESGO'] * 0.5
+
+        +
+
+        df_alertas['IET'] * 0.3
+
+        +
+
+        df_alertas['EVENTOS'] * 0.2
+    )
+
+else:
+
+    df_alertas['IPT'] = (
+
+        df_alertas['RIESGO'] * 0.7
+
+        +
+
+        df_alertas['EVENTOS'] * 0.3
+    )
+
+# --------------------------------------
+# AGRUPAR MUNICIPIOS
+# --------------------------------------
+
+alertas = df_alertas.groupby(
+    'MUNICIPIO'
+)['IPT'].mean().reset_index()
+
+alertas = alertas.sort_values(
+    by='IPT',
+    ascending=False
+)
+
+# --------------------------------------
+# CLASIFICAR ALERTAS
+# --------------------------------------
+
+def clasificar_alerta(valor):
+
+    if valor >= 15:
+
+        return "🔴 Crítico"
+
+    elif valor >= 8:
+
+        return "🟠 Alto"
+
+    elif valor >= 4:
+
+        return "🟡 Atención"
+
+    else:
+
+        return "🟢 Estable"
+
+alertas['NIVEL_ALERTA'] = alertas[
+    'IPT'
+].apply(clasificar_alerta)
+
+# --------------------------------------
+# MOSTRAR ALERTAS
+# --------------------------------------
+
+st.dataframe(
+    alertas.head(30),
+    use_container_width=True
+)
+
+# --------------------------------------
+# GRÁFICO ALERTAS
+# --------------------------------------
+
+fig_alertas = px.bar(
+
+    alertas.head(20),
+
+    x='MUNICIPIO',
+
+    y='IPT',
+
+    color='NIVEL_ALERTA',
+
+    title='Municipios Bajo Mayor Presión Territorial'
+)
+
+st.plotly_chart(
+    fig_alertas,
+    use_container_width=True
+)
 # ==================================================
 # TABLA FINAL
 # ==================================================
