@@ -457,6 +457,131 @@ st.plotly_chart(
     use_container_width=True
 )
 # ==================================================
+# ANÁLISIS AVANZADO GAO
+# ==================================================
+
+st.subheader(
+    "Análisis Estratégico GAO"
+)
+
+# --------------------------------------
+# MÉTRICAS GAO
+# --------------------------------------
+
+gao_stats = df_filtrado.groupby(
+    'GAO'
+).agg({
+
+    'EVENTOS': 'sum',
+
+    'MUNICIPIO': 'nunique',
+
+    'ACTIVIDAD': 'nunique',
+
+    'RIESGO': 'mean'
+
+}).reset_index()
+
+# RENOMBRAR
+
+gao_stats.columns = [
+
+    'GAO',
+
+    'EVENTOS',
+
+    'MUNICIPIOS_OCUPADOS',
+
+    'DIVERSIDAD_TACTICA',
+
+    'RIESGO_PROMEDIO'
+]
+
+# --------------------------------------
+# ÍNDICE ADAPTACIÓN
+# --------------------------------------
+
+gao_stats['INDICE_ADAPTACION'] = (
+
+    gao_stats['DIVERSIDAD_TACTICA'] * 0.6
+
+    +
+
+    gao_stats['MUNICIPIOS_OCUPADOS'] * 0.4
+)
+
+# --------------------------------------
+# ORDENAR
+# --------------------------------------
+
+gao_stats = gao_stats.sort_values(
+
+    by='INDICE_ADAPTACION',
+
+    ascending=False
+)
+
+# --------------------------------------
+# TABLA
+# --------------------------------------
+
+st.dataframe(
+    gao_stats,
+    use_container_width=True
+)
+
+# --------------------------------------
+# GRÁFICO EXPANSIÓN
+# --------------------------------------
+
+fig_gao = px.bar(
+
+    gao_stats,
+
+    x='GAO',
+
+    y='MUNICIPIOS_OCUPADOS',
+
+    color='INDICE_ADAPTACION',
+
+    title='Expansión Territorial y Adaptación GAO',
+
+    color_continuous_scale='Viridis'
+)
+
+st.plotly_chart(
+    fig_gao,
+    use_container_width=True
+)
+
+# --------------------------------------
+# DIVERSIDAD TÁCTICA
+# --------------------------------------
+
+fig_tactica = px.scatter(
+
+    gao_stats,
+
+    x='MUNICIPIOS_OCUPADOS',
+
+    y='DIVERSIDAD_TACTICA',
+
+    size='EVENTOS',
+
+    color='RIESGO_PROMEDIO',
+
+    hover_name='GAO',
+
+    title='Capacidad Adaptativa y Expansión Territorial',
+
+    color_continuous_scale='Reds'
+)
+
+st.plotly_chart(
+    fig_tactica,
+    use_container_width=True
+)
+# ==================================================
 # TABLA FINAL
 # ==================================================
 
