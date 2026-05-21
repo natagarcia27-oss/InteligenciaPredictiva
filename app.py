@@ -24,12 +24,77 @@ st.title(
 
 @st.cache_data
 def cargar_datos():
+# ======================================
+# FILTROS LATERALES
+# ======================================
 
+st.sidebar.title("Filtros Estratégicos")
+
+# DEPARTAMENTO
+
+departamentos = sorted(
+    df_filtrado['DEPARTAMENTO'].dropna().unique()
+)
+
+dep_sel = st.sidebar.multiselect(
+
+    "Departamento",
+
+    departamentos
+)
+
+# MUNICIPIO
+
+municipios = sorted(
+    df_filtrado['MUNICIPIO'].dropna().unique()
+)
+
+mun_sel = st.sidebar.multiselect(
+
+    "Municipio",
+
+    municipios
+)
+
+# AÑO
+
+anios = sorted(
+    df_filtrado['AÑO'].dropna().unique()
+)
+
+anio_sel = st.sidebar.multiselect(
+
+    "Año",
+
+    anios
+)
+
+# FILTROS
+
+df_filtrado = df_filtrado.copy()
+
+if dep_sel:
+
+    df_filtrado = df_filtrado[
+        df_filtrado['DEPARTAMENTO'].isin(dep_sel)
+    ]
+
+if mun_sel:
+
+    df_filtrado = df_filtrado[
+        df_filtrado['MUNICIPIO'].isin(mun_sel)
+    ]
+
+if anio_sel:
+
+    df_filtrado = df_filtrado[
+        df_filtrado['AÑO'].isin(anio_sel)
+    ]
     return pd.read_csv(
         "riesgo_municipal.csv"
     )
 
-df = cargar_datos()
+df_filtrado = cargar_datos()
 
 # ==================================
 # KPIs
@@ -39,17 +104,17 @@ col1, col2, col3 = st.columns(3)
 
 col1.metric(
     "Municipios",
-    df['MUNICIPIO'].nunique()
+    df_filtrado['MUNICIPIO'].nunique()
 )
 
 col2.metric(
     "Eventos",
-    int(df['EVENTOS'].sum())
+    int(df_filtrado['EVENTOS'].sum())
 )
 
 col3.metric(
     "Registros",
-    len(df)
+    len(df_filtrado)
 )
 
 # ==================================
@@ -61,7 +126,7 @@ st.subheader(
 )
 
 st.dataframe(
-    df.head(100)
+    df_filtrado.head(100)
 )
 import streamlit as st
 import pandas as pd
@@ -87,7 +152,7 @@ def cargar_datos():
         "riesgo_municipal.csv"
     )
 
-df = cargar_datos()
+df_filtrado = cargar_datos()
 
 # ======================================
 # TÍTULO
@@ -112,22 +177,22 @@ col1, col2, col3, col4 = st.columns(4)
 
 col1.metric(
     "Municipios",
-    df['MUNICIPIO'].nunique()
+    df_filtrado['MUNICIPIO'].nunique()
 )
 
 col2.metric(
     "Eventos",
-    int(df['EVENTOS'].sum())
+    int(df_filtrado['EVENTOS'].sum())
 )
 
 col3.metric(
     "Riesgo Promedio",
-    round(df['RIESGO'].mean(),2)
+    round(df_filtrado['RIESGO'].mean(),2)
 )
 
 col4.metric(
     "GAO Presentes",
-    int(df['GAO_PRESENTES'].mean())
+    int(df_filtrado['GAO_PRESENTES'].mean())
 )
 
 # ======================================
@@ -138,7 +203,7 @@ st.subheader(
     "Municipios de Mayor Riesgo"
 )
 
-top = df.groupby(
+top = df_filtrado.groupby(
     'MUNICIPIO'
 )['RIESGO'].mean().reset_index()
 
@@ -180,7 +245,7 @@ st.subheader(
     "Evolución Temporal de Eventos"
 )
 
-temporal = df.groupby(
+temporal = df_filtrado.groupby(
     ['AÑO','SEMANA']
 ).size().reset_index(name='EVENTOS')
 
@@ -218,13 +283,13 @@ st.plotly_chart(
 # ESCALAMIENTO TERRITORIAL
 # ======================================
 
-if 'IET' in df.columns:
+if 'IET' in df_filtrado.columns:
 
     st.subheader(
         "Escalamiento Territorial"
     )
 
-    esc = df.groupby(
+    esc = df_filtrado.groupby(
         'MUNICIPIO'
     )['IET'].mean().reset_index()
 
@@ -266,7 +331,7 @@ st.subheader(
     "Exposición Operacional"
 )
 
-expo = df.groupby(
+expo = df_filtrado.groupby(
     'MUNICIPIO'
 )['UNIDADES_EXPUESTAS'].mean().reset_index()
 
@@ -302,7 +367,7 @@ st.subheader(
     "Mapa Estratégico Territorial"
 )
 
-mapa = df.groupby(
+mapa = df_filtrado.groupby(
     [
         'MUNICIPIO',
         'LATITUD',
@@ -364,6 +429,6 @@ st.subheader(
 )
 
 st.dataframe(
-    df.head(100),
+    df_filtrado.head(100),
     use_container_width=True
 )
