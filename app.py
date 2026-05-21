@@ -7,7 +7,6 @@ import pandas as pd
 import numpy as np
 
 import plotly.express as px
-import plotly.graph_objects as go
 
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
@@ -29,7 +28,7 @@ st.set_page_config(
 )
 
 # =========================================================
-# ESTILO VISUAL
+# ESTILO
 # =========================================================
 
 st.markdown("""
@@ -71,16 +70,13 @@ def leer_csv_seguro(ruta):
 
         try:
 
-            df = pd.read_csv(
+            return pd.read_csv(
                 ruta,
                 encoding=cod
             )
 
-            return df
-
-        except Exception:
-
-            continue
+        except:
+            pass
 
     return pd.DataFrame()
 
@@ -90,43 +86,20 @@ def leer_csv_seguro(ruta):
 
 def limpiar_columnas(df):
 
-    df.columns = df.columns.str.strip()
+    df.columns = [
 
-    reemplazos = {
+        col.strip()
+        .upper()
+        .replace(" ", "_")
+        .replace("-", "_")
 
-        'Ã‘':'Ñ',
-        'Ã“':'Ó',
-        'Ã‰':'É',
-        'Ã':'Í',
-        'Ã':'Á',
-        'Ãš':'Ú'
-    }
-
-    nuevas = []
-
-    for col in df.columns:
-
-        for malo, bueno in reemplazos.items():
-
-            col = col.replace(
-                malo,
-                bueno
-            )
-
-        col = (
-            col.upper()
-            .replace(" ", "_")
-            .replace("-", "_")
-        )
-
-        nuevas.append(col)
-
-    df.columns = nuevas
+        for col in df.columns
+    ]
 
     return df
 
 # =========================================================
-# CARGAR BASES
+# CARGAR DATOS
 # =========================================================
 
 @st.cache_data
@@ -163,12 +136,12 @@ if df.empty:
     st.stop()
 
 # =========================================================
-# DETECCIÓN COLUMNAS
+# DETECTAR COLUMNAS
 # =========================================================
 
-def detectar_columna(candidatas, dataframe):
+def detectar_columna(lista, dataframe):
 
-    for col in candidatas:
+    for col in lista:
 
         if col in dataframe.columns:
 
@@ -181,9 +154,7 @@ COL_GAO = detectar_columna(
     [
         'GAO',
         'FG/BLOQUE/ESTRUCTURA',
-        'FG_BLOQUE_ESTRUCTURA',
-        'ESTRUCTURA',
-        'SUBESTRUCTURA'
+        'FG_BLOQUE_ESTRUCTURA'
     ],
 
     df_op
@@ -202,8 +173,8 @@ COL_ACTIVIDAD = detectar_columna(
 COL_AFECTACION = detectar_columna(
 
     [
-        'TIPO_DE_AFECTACIÓN',
-        'TIPO_DE_AFECTACION'
+        'TIPO_DE_AFECTACION',
+        'TIPO_DE_AFECTACIÓN'
     ],
 
     df_op
@@ -216,10 +187,6 @@ COL_AFECTACION = detectar_columna(
 st.sidebar.title(
     "Filtros Estratégicos"
 )
-
-# =========================================================
-# FILTROS
-# =========================================================
 
 dep_sel = []
 mun_sel = []
@@ -292,6 +259,55 @@ if anio_sel:
     ]
 
 # =========================================================
+# CREAR IPE ANTES DE TODO
+# =========================================================
+
+columnas_ipe = [
+
+    'RIESGO',
+
+    'IET',
+
+    'EVENTOS',
+
+    'UNIDADES_EXPUESTAS',
+
+    'GAO_PRESENTES'
+]
+
+validas_ipe = all(
+    col in df_filtrado.columns
+    for col in columnas_ipe
+)
+
+if validas_ipe:
+
+    df_filtrado['IPE'] = (
+
+        df_filtrado['RIESGO'] * 0.30
+
+        +
+
+        df_filtrado['IET'] * 0.25
+
+        +
+
+        df_filtrado['EVENTOS'] * 0.20
+
+        +
+
+        df_filtrado['UNIDADES_EXPUESTAS'] * 0.15
+
+        +
+
+        df_filtrado['GAO_PRESENTES'] * 0.10
+    )
+
+else:
+
+    df_filtrado['IPE'] = 0
+
+# =========================================================
 # TITULO
 # =========================================================
 
@@ -301,16 +317,15 @@ st.title(
 
 st.markdown("""
 
-### Plataforma integrada para:
+### Plataforma integrada de:
 
-- Inteligencia operacional
-- Riesgo territorial
-- Prospectiva estratégica
-- IA predictiva
-- Detección anomalías
-- Inteligencia organizacional
-- Corredores estratégicos
-- Priorización operacional
+- Inteligencia Operacional
+- Prospectiva Territorial
+- IA Predictiva
+- Corredores Estratégicos
+- Riesgo Territorial
+- Detección de Anomalías
+- Clustering Territorial
 
 """)
 
@@ -322,76 +337,53 @@ st.subheader(
     "Indicadores Estratégicos"
 )
 
-col1, col2, col3, col4, col5 = st.columns(5)
+c1, c2, c3, c4, c5 = st.columns(5)
 
-col1.metric(
+c1.metric(
     "Municipios",
     df_filtrado['MUNICIPIO'].nunique()
 )
 
-col2.metric(
+c2.metric(
     "Eventos",
     int(df_filtrado['EVENTOS'].sum())
 )
 
-col3.metric(
+c3.metric(
     "Riesgo",
     round(df_filtrado['RIESGO'].mean(), 2)
 )
 
-col4.metric(
-    "GAO",
-    round(df_filtrado['GAO_PRESENTES'].mean(), 2)
-)
-
-col5.metric(
+c4.metric(
     "IET",
     round(df_filtrado['IET'].mean(), 2)
 )
 
+c5.metric(
+    "IPE",
+    round(df_filtrado['IPE'].mean(), 2)
+)
+
 # =========================================================
-# IPE
+# MUNICIPIOS CRÍTICOS
 # =========================================================
 
 st.subheader(
-    "Índice Predictivo Estratégico"
+    "Municipios Críticos"
 )
 
-ipe = df_filtrado.copy()
-
-ipe['IPE'] = (
-
-    ipe['RIESGO'] * 0.30
-
-    +
-
-    ipe['IET'] * 0.25
-
-    +
-
-    ipe['EVENTOS'] * 0.20
-
-    +
-
-    ipe['UNIDADES_EXPUESTAS'] * 0.15
-
-    +
-
-    ipe['GAO_PRESENTES'] * 0.10
-)
-
-ipe_rank = ipe.groupby(
+top = df_filtrado.groupby(
     'MUNICIPIO'
 )['IPE'].mean().reset_index()
 
-ipe_rank = ipe_rank.sort_values(
+top = top.sort_values(
     by='IPE',
     ascending=False
 )
 
-fig_ipe = px.bar(
+fig_top = px.bar(
 
-    ipe_rank.head(20),
+    top.head(20),
 
     x='MUNICIPIO',
 
@@ -403,68 +395,105 @@ fig_ipe = px.bar(
 )
 
 st.plotly_chart(
-    fig_ipe,
+    fig_top,
     use_container_width=True
 )
+
+# =========================================================
+# EVOLUCIÓN TEMPORAL
+# =========================================================
+
+if 'SEMANA' in df_filtrado.columns:
+
+    st.subheader(
+        "Evolución Temporal"
+    )
+
+    temporal = df_filtrado.groupby(
+        'SEMANA'
+    )['EVENTOS'].sum().reset_index()
+
+    fig_temp = px.line(
+
+        temporal,
+
+        x='SEMANA',
+
+        y='EVENTOS',
+
+        markers=True
+    )
+
+    st.plotly_chart(
+        fig_temp,
+        use_container_width=True
+    )
 
 # =========================================================
 # MAPA
 # =========================================================
 
-st.subheader(
-    "Mapa Estratégico"
-)
+lat_ok = 'LATITUD' in df_filtrado.columns
+lon_ok = 'LONGITUD' in df_filtrado.columns
 
-mapa = df_filtrado.groupby(
-    [
-        'MUNICIPIO',
-        'LATITUD',
-        'LONGITUD'
-    ]
-).agg({
+if lat_ok and lon_ok:
 
-    'IPE':'mean',
+    st.subheader(
+        "Mapa Estratégico"
+    )
 
-    'EVENTOS':'sum'
+    mapa = df_filtrado.groupby(
 
-}).reset_index()
+        [
+            'MUNICIPIO',
+            'LATITUD',
+            'LONGITUD'
+        ]
 
-fig_map = px.scatter_mapbox(
+    ).agg({
 
-    mapa,
+        'IPE':'mean',
 
-    lat='LATITUD',
+        'EVENTOS':'sum'
 
-    lon='LONGITUD',
+    }).reset_index()
 
-    size='EVENTOS',
+    fig_map = px.scatter_mapbox(
 
-    color='IPE',
+        mapa,
 
-    hover_name='MUNICIPIO',
+        lat='LATITUD',
 
-    zoom=4,
+        lon='LONGITUD',
 
-    height=700,
+        size='EVENTOS',
 
-    color_continuous_scale='Turbo'
-)
+        color='IPE',
 
-fig_map.update_layout(
-    mapbox_style='carto-darkmatter'
-)
+        hover_name='MUNICIPIO',
 
-st.plotly_chart(
-    fig_map,
-    use_container_width=True
-)
+        zoom=4,
+
+        height=700,
+
+        color_continuous_scale='Turbo'
+    )
+
+    fig_map.update_layout(
+        mapbox_style='carto-darkmatter'
+    )
+
+    st.plotly_chart(
+        fig_map,
+        use_container_width=True
+    )
 
 # =========================================================
 # IA PREDICTIVA
 # =========================================================
 
 st.subheader(
-    "Motor Predictivo IA"
+    "Motor IA Predictiva"
 )
 
 features = [
@@ -484,13 +513,10 @@ features = [
 
 target = 'EVENTO_FUTURO'
 
-validas = True
-
-for col in features + [target]:
-
-    if col not in df_filtrado.columns:
-
-        validas = False
+validas = all(
+    col in df_filtrado.columns
+    for col in features + [target]
+)
 
 if validas:
 
@@ -498,51 +524,89 @@ if validas:
         features + [target]
     ].dropna()
 
-    X = modelo_df[features]
+    if len(modelo_df) > 50:
 
-    y = modelo_df[target]
+        X = modelo_df[features]
+        y = modelo_df[target]
 
-    X_train, X_test, y_train, y_test = train_test_split(
+        X_train, X_test, y_train, y_test = train_test_split(
 
-        X,
-        y,
+            X,
+            y,
 
-        test_size=0.2,
+            test_size=0.2,
 
-        random_state=42
-    )
+            random_state=42
+        )
 
-    modelo = XGBClassifier(
+        modelo = XGBClassifier(
 
-        n_estimators=100,
+            n_estimators=100,
 
-        max_depth=4,
+            max_depth=4,
 
-        learning_rate=0.1,
+            learning_rate=0.1,
 
-        subsample=0.8,
+            eval_metric='logloss'
+        )
 
-        colsample_bytree=0.8,
+        modelo.fit(
+            X_train,
+            y_train
+        )
 
-        eval_metric='logloss'
-    )
+        pred = modelo.predict(X_test)
 
-    modelo.fit(
-        X_train,
-        y_train
-    )
+        acc = accuracy_score(
+            y_test,
+            pred
+        )
 
-    pred = modelo.predict(X_test)
+        st.metric(
+            "Precisión IA",
+            round(acc, 3)
+        )
 
-    acc = accuracy_score(
-        y_test,
-        pred
-    )
+        probabilidades = modelo.predict_proba(X)[:,1]
 
-    st.metric(
-        "Precisión IA",
-        round(acc, 3)
-    )
+        modelo_df['RIESGO_PREDICTIVO'] = (
+
+            probabilidades * 100
+        )
+
+        predicciones = df_filtrado.loc[
+            modelo_df.index
+        ].copy()
+
+        predicciones['RIESGO_PREDICTIVO'] = (
+
+            modelo_df['RIESGO_PREDICTIVO']
+        )
+
+        top_pred = predicciones.groupby(
+            'MUNICIPIO'
+        )['RIESGO_PREDICTIVO'].mean().reset_index()
+
+        fig_pred = px.bar(
+
+            top_pred.sort_values(
+                by='RIESGO_PREDICTIVO',
+                ascending=False
+            ).head(20),
+
+            x='MUNICIPIO',
+
+            y='RIESGO_PREDICTIVO',
+
+            color='RIESGO_PREDICTIVO',
+
+            color_continuous_scale='Turbo'
+        )
+
+        st.plotly_chart(
+            fig_pred,
+            use_container_width=True
+        )
 
 # =========================================================
 # ANOMALÍAS
@@ -552,7 +616,7 @@ st.subheader(
     "Anomalías Estratégicas"
 )
 
-anomalias_features = [
+anomalias_cols = [
 
     'EVENTOS',
 
@@ -565,52 +629,61 @@ anomalias_features = [
     'UNIDADES_EXPUESTAS'
 ]
 
-anomalias_df = df_filtrado[
-    ['MUNICIPIO'] + anomalias_features
-].dropna()
-
-X_anom = anomalias_df[
-    anomalias_features
-]
-
-detector = IsolationForest(
-
-    contamination=0.05,
-
-    random_state=42
+anom_ok = all(
+    col in df_filtrado.columns
+    for col in anomalias_cols
 )
 
-detector.fit(X_anom)
+if anom_ok:
 
-anomalias_df['ANOMALIA'] = detector.predict(
-    X_anom
-)
+    anom_df = df_filtrado[
+        ['MUNICIPIO'] + anomalias_cols
+    ].dropna()
 
-anomalias = anomalias_df[
-    anomalias_df['ANOMALIA'] == -1
-]
+    if len(anom_df) > 20:
 
-fig_anom = px.scatter(
+        X_anom = anom_df[
+            anomalias_cols
+        ]
 
-    anomalias,
+        detector = IsolationForest(
 
-    x='RIESGO',
+            contamination=0.05,
 
-    y='EVENTOS',
+            random_state=42
+        )
 
-    size='IET',
+        detector.fit(X_anom)
 
-    color='UNIDADES_EXPUESTAS',
+        anom_df['ANOMALIA'] = detector.predict(
+            X_anom
+        )
 
-    hover_name='MUNICIPIO',
+        anomalos = anom_df[
+            anom_df['ANOMALIA'] == -1
+        ]
 
-    color_continuous_scale='Turbo'
-)
+        fig_anom = px.scatter(
 
-st.plotly_chart(
-    fig_anom,
-    use_container_width=True
-)
+            anomalos,
+
+            x='RIESGO',
+
+            y='EVENTOS',
+
+            size='IET',
+
+            color='UNIDADES_EXPUESTAS',
+
+            hover_name='MUNICIPIO',
+
+            color_continuous_scale='Turbo'
+        )
+
+        st.plotly_chart(
+            fig_anom,
+            use_container_width=True
+        )
 
 # =========================================================
 # CLUSTERING
@@ -620,7 +693,7 @@ st.subheader(
     "Clustering Territorial"
 )
 
-cluster_features = [
+cluster_cols = [
 
     'RIESGO',
 
@@ -631,44 +704,55 @@ cluster_features = [
     'GAO_PRESENTES'
 ]
 
-cluster_df = df_filtrado[
-    ['MUNICIPIO'] + cluster_features
-].dropna()
-
-X_cluster = cluster_df[
-    cluster_features
-]
-
-modelo_cluster = KMeans(
-
-    n_clusters=4,
-
-    random_state=42
+cluster_ok = all(
+    col in df_filtrado.columns
+    for col in cluster_cols
 )
 
-cluster_df['CLUSTER'] = modelo_cluster.fit_predict(
-    X_cluster
-)
+if cluster_ok:
 
-fig_cluster = px.scatter(
+    cluster_df = df_filtrado[
+        ['MUNICIPIO'] + cluster_cols
+    ].dropna()
 
-    cluster_df,
+    if len(cluster_df) > 10:
 
-    x='RIESGO',
+        X_cluster = cluster_df[
+            cluster_cols
+        ]
 
-    y='EVENTOS',
+        modelo_cluster = KMeans(
 
-    color='CLUSTER',
+            n_clusters=4,
 
-    size='IET',
+            random_state=42,
 
-    hover_name='MUNICIPIO'
-)
+            n_init=10
+        )
 
-st.plotly_chart(
-    fig_cluster,
-    use_container_width=True
-)
+        cluster_df['CLUSTER'] = modelo_cluster.fit_predict(
+            X_cluster
+        )
+
+        fig_cluster = px.scatter(
+
+            cluster_df,
+
+            x='RIESGO',
+
+            y='EVENTOS',
+
+            color='CLUSTER',
+
+            size='IET',
+
+            hover_name='MUNICIPIO'
+        )
+
+        st.plotly_chart(
+            fig_cluster,
+            use_container_width=True
+        )
 
 # =========================================================
 # INTELIGENCIA ORGANIZACIONAL
@@ -680,7 +764,7 @@ if COL_GAO and COL_ACTIVIDAD:
         "Inteligencia Organizacional"
     )
 
-    gao_intel = df_op.groupby(
+    org = df_op.groupby(
         COL_GAO
     ).agg({
 
@@ -690,7 +774,7 @@ if COL_GAO and COL_ACTIVIDAD:
 
     }).reset_index()
 
-    gao_intel.columns = [
+    org.columns = [
 
         'ORGANIZACION',
 
@@ -699,18 +783,18 @@ if COL_GAO and COL_ACTIVIDAD:
         'TACTICAS'
     ]
 
-    gao_intel['ADAPTACION'] = (
+    org['ADAPTACION'] = (
 
-        gao_intel['EXPANSION'] * 0.5
+        org['EXPANSION'] * 0.5
 
         +
 
-        gao_intel['TACTICAS'] * 0.5
+        org['TACTICAS'] * 0.5
     )
 
     fig_org = px.scatter(
 
-        gao_intel,
+        org,
 
         x='EXPANSION',
 
@@ -738,23 +822,28 @@ st.subheader(
     "Matriz Estratégica"
 )
 
-fig_heat = px.density_heatmap(
+if all(
+    col in df_filtrado.columns
+    for col in ['RIESGO', 'EVENTOS', 'IET']
+):
 
-    df_filtrado,
+    fig_heat = px.density_heatmap(
 
-    x='RIESGO',
+        df_filtrado,
 
-    y='EVENTOS',
+        x='RIESGO',
 
-    z='IET',
+        y='EVENTOS',
 
-    color_continuous_scale='Turbo'
-)
+        z='IET',
 
-st.plotly_chart(
-    fig_heat,
-    use_container_width=True
-)
+        color_continuous_scale='Turbo'
+    )
+
+    st.plotly_chart(
+        fig_heat,
+        use_container_width=True
+    )
 
 # =========================================================
 # TABLA FINAL
