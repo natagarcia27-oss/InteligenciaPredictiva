@@ -294,7 +294,67 @@ st.plotly_chart(
     fig4,
     use_container_width=True
 )
+# ======================================
+# MAPA ESTRATÉGICO
+# ======================================
 
+st.subheader(
+    "Mapa Estratégico Territorial"
+)
+
+mapa = df.groupby(
+    [
+        'MUNICIPIO',
+        'LATITUD',
+        'LONGITUD'
+    ]
+).agg({
+
+    'RIESGO':'mean',
+
+    'EVENTOS':'sum'
+
+}).reset_index()
+
+fig_map = px.scatter_mapbox(
+
+    mapa,
+
+    lat='LATITUD',
+
+    lon='LONGITUD',
+
+    size='EVENTOS',
+
+    color='RIESGO',
+
+    hover_name='MUNICIPIO',
+
+    zoom=4,
+
+    height=700,
+
+    color_continuous_scale='Reds',
+
+    size_max=30
+)
+
+fig_map.update_layout(
+
+    mapbox_style='carto-darkmatter',
+
+    margin=dict(
+        l=0,
+        r=0,
+        t=0,
+        b=0
+    )
+)
+
+st.plotly_chart(
+    fig_map,
+    use_container_width=True
+)
 # ======================================
 # TABLA ESTRATÉGICA
 # ======================================
