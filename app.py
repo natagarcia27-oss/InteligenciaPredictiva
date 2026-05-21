@@ -5,6 +5,8 @@ import plotly.graph_objects as go
 
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
+from sklearn.ensemble import IsolationForest
+
 from xgboost import XGBClassifier
 
 # =========================================================
@@ -125,7 +127,7 @@ if df.empty:
     st.stop()
 
 # =========================================================
-# DETECTAR COLUMNAS OPERACIONALES
+# DETECCIÓN COLUMNAS OPERACIONALES
 # =========================================================
 
 def detectar_columna(candidatas, dataframe):
@@ -282,8 +284,8 @@ st.markdown("""
 - Adaptación Organizacional
 - Corredores Críticos
 - Alertas Tempranas
-- Simulación Prospectiva
 - IA Predictiva
+- Detección de Anomalías
 """)
 
 # =========================================================
@@ -818,26 +820,6 @@ st.plotly_chart(
     use_container_width=True
 )
 
-fig_corr_bar = px.bar(
-
-    top_corredores.head(20),
-
-    x='MUNICIPIO',
-
-    y='INDICE_CORREDOR',
-
-    color='INDICE_CORREDOR',
-
-    color_continuous_scale='Reds',
-
-    title='Municipios con Mayor Intensidad Territorial'
-)
-
-st.plotly_chart(
-    fig_corr_bar,
-    use_container_width=True
-)
-
 # =========================================================
 # PROSPECTIVA TERRITORIAL
 # =========================================================
@@ -1039,6 +1021,99 @@ if validas:
 
     st.plotly_chart(
         fig_pred,
+        use_container_width=True
+    )
+
+# =========================================================
+# DETECCIÓN DE ANOMALÍAS
+# =========================================================
+
+st.subheader(
+    "Detección de Anomalías Estratégicas"
+)
+
+anomalias_features = [
+
+    'EVENTOS',
+
+    'RIESGO',
+
+    'IET',
+
+    'GAO_PRESENTES',
+
+    'UNIDADES_EXPUESTAS'
+]
+
+anomalias_validas = True
+
+for col in anomalias_features:
+
+    if col not in df_filtrado.columns:
+
+        anomalias_validas = False
+
+if anomalias_validas:
+
+    anomalias_df = df_filtrado[
+        ['MUNICIPIO'] + anomalias_features
+    ].dropna()
+
+    X_anom = anomalias_df[
+        anomalias_features
+    ]
+
+    detector = IsolationForest(
+
+        contamination=0.05,
+
+        random_state=42
+    )
+
+    detector.fit(X_anom)
+
+    anomalias_df['ANOMALIA'] = detector.predict(
+        X_anom
+    )
+
+    anomalias_df['SCORE_ANOMALIA'] = detector.decision_function(
+        X_anom
+    )
+
+    anomalos = anomalias_df[
+        anomalias_df['ANOMALIA'] == -1
+    ]
+
+    anomalos = anomalos.sort_values(
+        by='SCORE_ANOMALIA'
+    )
+
+    st.dataframe(
+        anomalos.head(30),
+        use_container_width=True
+    )
+
+    fig_anom = px.scatter(
+
+        anomalos.head(50),
+
+        x='RIESGO',
+
+        y='EVENTOS',
+
+        size='IET',
+
+        color='SCORE_ANOMALIA',
+
+        hover_name='MUNICIPIO',
+
+        title='Municipios Atípicos Detectados',
+
+        color_continuous_scale='Turbo'
+    )
+
+    st.plotly_chart(
+        fig_anom,
         use_container_width=True
     )
 
