@@ -63,3 +63,247 @@ st.subheader(
 st.dataframe(
     df.head(100)
 )
+import streamlit as st
+import pandas as pd
+import plotly.express as px
+
+# ======================================
+# CONFIGURACIÓN
+# ======================================
+
+st.set_page_config(
+    page_title="Inteligencia Territorial",
+    layout="wide"
+)
+
+# ======================================
+# CARGA DATOS
+# ======================================
+
+@st.cache_data
+def cargar_datos():
+
+    return pd.read_csv(
+        "riesgo_municipal.csv"
+    )
+
+df = cargar_datos()
+
+# ======================================
+# TÍTULO
+# ======================================
+
+st.title(
+    "Sistema Inteligencia Predictiva Territorial"
+)
+
+st.markdown(
+"""
+Plataforma estratégica para análisis de riesgo,
+escalamiento territorial y comportamiento operacional.
+"""
+)
+
+# ======================================
+# KPIs
+# ======================================
+
+col1, col2, col3, col4 = st.columns(4)
+
+col1.metric(
+    "Municipios",
+    df['MUNICIPIO'].nunique()
+)
+
+col2.metric(
+    "Eventos",
+    int(df['EVENTOS'].sum())
+)
+
+col3.metric(
+    "Riesgo Promedio",
+    round(df['RIESGO'].mean(),2)
+)
+
+col4.metric(
+    "GAO Presentes",
+    int(df['GAO_PRESENTES'].mean())
+)
+
+# ======================================
+# MUNICIPIOS CRÍTICOS
+# ======================================
+
+st.subheader(
+    "Municipios de Mayor Riesgo"
+)
+
+top = df.groupby(
+    'MUNICIPIO'
+)['RIESGO'].mean().reset_index()
+
+top = top.sort_values(
+    by='RIESGO',
+    ascending=False
+).head(20)
+
+fig1 = px.bar(
+
+    top,
+
+    x='MUNICIPIO',
+
+    y='RIESGO',
+
+    color='RIESGO',
+
+    color_continuous_scale='Reds',
+
+    title='Top 20 Municipios Críticos'
+)
+
+fig1.update_layout(
+    xaxis_title="Municipio",
+    yaxis_title="Riesgo"
+)
+
+st.plotly_chart(
+    fig1,
+    use_container_width=True
+)
+
+# ======================================
+# EVOLUCIÓN TEMPORAL
+# ======================================
+
+st.subheader(
+    "Evolución Temporal de Eventos"
+)
+
+temporal = df.groupby(
+    ['AÑO','SEMANA']
+).size().reset_index(name='EVENTOS')
+
+temporal['PERIODO'] = (
+
+    temporal['AÑO'].astype(str)
+    + '-'
+    + temporal['SEMANA'].astype(str)
+)
+
+fig2 = px.line(
+
+    temporal,
+
+    x='PERIODO',
+
+    y='EVENTOS',
+
+    markers=True,
+
+    title='Comportamiento Temporal'
+)
+
+fig2.update_layout(
+    xaxis_title="Periodo",
+    yaxis_title="Eventos"
+)
+
+st.plotly_chart(
+    fig2,
+    use_container_width=True
+)
+
+# ======================================
+# ESCALAMIENTO TERRITORIAL
+# ======================================
+
+if 'IET' in df.columns:
+
+    st.subheader(
+        "Escalamiento Territorial"
+    )
+
+    esc = df.groupby(
+        'MUNICIPIO'
+    )['IET'].mean().reset_index()
+
+    esc = esc.sort_values(
+        by='IET',
+        ascending=False
+    ).head(20)
+
+    fig3 = px.bar(
+
+        esc,
+
+        x='MUNICIPIO',
+
+        y='IET',
+
+        color='IET',
+
+        color_continuous_scale='Oranges',
+
+        title='Índice Escalamiento Territorial'
+    )
+
+    fig3.update_layout(
+        xaxis_title="Municipio",
+        yaxis_title="IET"
+    )
+
+    st.plotly_chart(
+        fig3,
+        use_container_width=True
+    )
+
+# ======================================
+# EXPOSICIÓN OPERACIONAL
+# ======================================
+
+st.subheader(
+    "Exposición Operacional"
+)
+
+expo = df.groupby(
+    'MUNICIPIO'
+)['UNIDADES_EXPUESTAS'].mean().reset_index()
+
+expo = expo.sort_values(
+    by='UNIDADES_EXPUESTAS',
+    ascending=False
+).head(20)
+
+fig4 = px.bar(
+
+    expo,
+
+    x='MUNICIPIO',
+
+    y='UNIDADES_EXPUESTAS',
+
+    color='UNIDADES_EXPUESTAS',
+
+    color_continuous_scale='Blues',
+
+    title='Municipios con Mayor Exposición'
+)
+
+st.plotly_chart(
+    fig4,
+    use_container_width=True
+)
+
+# ======================================
+# TABLA ESTRATÉGICA
+# ======================================
+
+st.subheader(
+    "Vista Estratégica Consolidada"
+)
+
+st.dataframe(
+    df.head(100),
+    use_container_width=True
+)
