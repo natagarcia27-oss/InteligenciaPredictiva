@@ -525,7 +525,134 @@ else:
     st.warning(
         "No se detectó columna organizacional"
     )
+# =========================================================
+# CORREDORES ESTRATÉGICOS
+# =========================================================
 
+st.subheader(
+    "Corredores Estratégicos"
+)
+
+# ---------------------------------------------------------
+# CREAR INTENSIDAD TERRITORIAL
+# ---------------------------------------------------------
+
+corredores = df_filtrado.groupby(
+    [
+        'DEPARTAMENTO',
+        'MUNICIPIO'
+        'LATITUD',
+        'LONGITUD'
+    ]
+).agg({
+
+    'EVENTOS':'sum',
+
+    'RIESGO':'mean',
+
+    'IET':'mean'
+
+}).reset_index()
+
+# ---------------------------------------------------------
+# ÍNDICE TERRITORIAL
+# ---------------------------------------------------------
+
+corredores['INDICE_CORREDOR'] = (
+
+    corredores['EVENTOS'] * 0.4
+
+    +
+
+    corredores['RIESGO'] * 40
+
+    +
+
+    corredores['IET'] * 10
+)
+
+# ---------------------------------------------------------
+# ORDENAR
+# ---------------------------------------------------------
+
+corredores = corredores.sort_values(
+
+    by='INDICE_CORREDOR',
+
+    ascending=False
+)
+
+# ---------------------------------------------------------
+# TOP CORREDORES
+# ---------------------------------------------------------
+
+top_corredores = corredores.head(30)
+
+# ---------------------------------------------------------
+# TABLA
+# ---------------------------------------------------------
+
+st.dataframe(
+    top_corredores,
+    use_container_width=True
+)
+
+# ---------------------------------------------------------
+# MAPA CALOR
+# ---------------------------------------------------------
+
+fig_corredor = px.density_mapbox(
+
+    top_corredores,
+
+    lat='LATITUD' if 'LATITUD' in top_corredores.columns else None,
+
+    lon='LONGITUD' if 'LONGITUD' in top_corredores.columns else None,
+
+    z='INDICE_CORREDOR',
+
+    radius=25,
+
+    center=dict(
+        lat=4.5,
+        lon=-74
+    ),
+
+    zoom=4,
+
+    height=700,
+
+    mapbox_style='carto-darkmatter'
+)
+
+st.plotly_chart(
+    fig_corredor,
+    use_container_width=True
+)
+
+# ---------------------------------------------------------
+# GRÁFICO BARRAS
+# ---------------------------------------------------------
+
+fig_bar_corr = px.bar(
+
+    top_corredores.head(20),
+
+    x='MUNICIPIO',
+
+    y='INDICE_CORREDOR',
+
+    color='INDICE_CORREDOR',
+
+    color_continuous_scale='Reds',
+
+    title='Municipios con Mayor Intensidad Territorial'
+)
+
+st.plotly_chart(
+    fig_bar_corr,
+    use_container_width=True
+)
 # =========================================================
 # TABLA FINAL
 # =========================================================
