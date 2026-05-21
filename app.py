@@ -1,77 +1,81 @@
 import streamlit as st
 import pandas as pd
+import plotly.express as px
 
-# ==================================
-# CONFIGURACIÓN
-# ==================================
+# ==================================================
+# CONFIGURACIÓN GENERAL
+# ==================================================
 
 st.set_page_config(
     page_title="Inteligencia Territorial",
     layout="wide"
 )
 
-# ==================================
-# TÍTULO
-# ==================================
-
-st.title(
-    "Sistema Inteligencia Predictiva Territorial"
-)
-
-# ==================================
-# CARGAR DATOS
-# ==================================
+# ==================================================
+# CARGA DE DATOS
+# ==================================================
 
 @st.cache_data
 def cargar_datos():
-# ======================================
+
+    df = pd.read_csv(
+        "riesgo_municipal.csv"
+    )
+
+    return df
+
+df = cargar_datos()
+
+# ==================================================
 # FILTROS LATERALES
-# ======================================
+# ==================================================
 
 st.sidebar.title("Filtros Estratégicos")
 
-# DEPARTAMENTO
+# -------------------------
+# Departamento
+# -------------------------
 
 departamentos = sorted(
-    df_filtrado['DEPARTAMENTO'].dropna().unique()
+    df['DEPARTAMENTO'].dropna().unique()
 )
 
 dep_sel = st.sidebar.multiselect(
-
     "Departamento",
-
     departamentos
 )
 
-# MUNICIPIO
+# -------------------------
+# Municipio
+# -------------------------
 
 municipios = sorted(
-    df_filtrado['MUNICIPIO'].dropna().unique()
+    df['MUNICIPIO'].dropna().unique()
 )
 
 mun_sel = st.sidebar.multiselect(
-
     "Municipio",
-
     municipios
 )
 
-# AÑO
+# -------------------------
+# Año
+# -------------------------
 
 anios = sorted(
-    df_filtrado['AÑO'].dropna().unique()
+    df['AÑO'].dropna().unique()
 )
 
 anio_sel = st.sidebar.multiselect(
-
     "Año",
-
     anios
 )
 
-# FILTROS
+# ==================================================
+# APLICAR FILTROS
+# ==================================================
 
-df_filtrado = df_filtrado.copy()
+df_filtrado = df.copy()
 
 if dep_sel:
 
@@ -90,88 +94,23 @@ if anio_sel:
     df_filtrado = df_filtrado[
         df_filtrado['AÑO'].isin(anio_sel)
     ]
-    return pd.read_csv(
-        "riesgo_municipal.csv"
-    )
 
-df_filtrado = cargar_datos()
-
-# ==================================
-# KPIs
-# ==================================
-
-col1, col2, col3 = st.columns(3)
-
-col1.metric(
-    "Municipios",
-    df_filtrado['MUNICIPIO'].nunique()
-)
-
-col2.metric(
-    "Eventos",
-    int(df_filtrado['EVENTOS'].sum())
-)
-
-col3.metric(
-    "Registros",
-    len(df_filtrado)
-)
-
-# ==================================
-# TABLA
-# ==================================
-
-st.subheader(
-    "Vista Estratégica"
-)
-
-st.dataframe(
-    df_filtrado.head(100)
-)
-import streamlit as st
-import pandas as pd
-import plotly.express as px
-
-# ======================================
-# CONFIGURACIÓN
-# ======================================
-
-st.set_page_config(
-    page_title="Inteligencia Territorial",
-    layout="wide"
-)
-
-# ======================================
-# CARGA DATOS
-# ======================================
-
-@st.cache_data
-def cargar_datos():
-
-    return pd.read_csv(
-        "riesgo_municipal.csv"
-    )
-
-df_filtrado = cargar_datos()
-
-# ======================================
+# ==================================================
 # TÍTULO
-# ======================================
+# ==================================================
 
 st.title(
     "Sistema Inteligencia Predictiva Territorial"
 )
 
-st.markdown(
-"""
+st.markdown("""
 Plataforma estratégica para análisis de riesgo,
 escalamiento territorial y comportamiento operacional.
-"""
-)
+""")
 
-# ======================================
+# ==================================================
 # KPIs
-# ======================================
+# ==================================================
 
 col1, col2, col3, col4 = st.columns(4)
 
@@ -187,7 +126,7 @@ col2.metric(
 
 col3.metric(
     "Riesgo Promedio",
-    round(df_filtrado['RIESGO'].mean(),2)
+    round(df_filtrado['RIESGO'].mean(), 2)
 )
 
 col4.metric(
@@ -195,9 +134,9 @@ col4.metric(
     int(df_filtrado['GAO_PRESENTES'].mean())
 )
 
-# ======================================
+# ==================================================
 # MUNICIPIOS CRÍTICOS
-# ======================================
+# ==================================================
 
 st.subheader(
     "Municipios de Mayor Riesgo"
@@ -227,26 +166,21 @@ fig1 = px.bar(
     title='Top 20 Municipios Críticos'
 )
 
-fig1.update_layout(
-    xaxis_title="Municipio",
-    yaxis_title="Riesgo"
-)
-
 st.plotly_chart(
     fig1,
     use_container_width=True
 )
 
-# ======================================
+# ==================================================
 # EVOLUCIÓN TEMPORAL
-# ======================================
+# ==================================================
 
 st.subheader(
-    "Evolución Temporal de Eventos"
+    "Evolución Temporal"
 )
 
 temporal = df_filtrado.groupby(
-    ['AÑO','SEMANA']
+    ['AÑO', 'SEMANA']
 ).size().reset_index(name='EVENTOS')
 
 temporal['PERIODO'] = (
@@ -269,19 +203,14 @@ fig2 = px.line(
     title='Comportamiento Temporal'
 )
 
-fig2.update_layout(
-    xaxis_title="Periodo",
-    yaxis_title="Eventos"
-)
-
 st.plotly_chart(
     fig2,
     use_container_width=True
 )
 
-# ======================================
+# ==================================================
 # ESCALAMIENTO TERRITORIAL
-# ======================================
+# ==================================================
 
 if 'IET' in df_filtrado.columns:
 
@@ -313,19 +242,14 @@ if 'IET' in df_filtrado.columns:
         title='Índice Escalamiento Territorial'
     )
 
-    fig3.update_layout(
-        xaxis_title="Municipio",
-        yaxis_title="IET"
-    )
-
     st.plotly_chart(
         fig3,
         use_container_width=True
     )
 
-# ======================================
+# ==================================================
 # EXPOSICIÓN OPERACIONAL
-# ======================================
+# ==================================================
 
 st.subheader(
     "Exposición Operacional"
@@ -359,76 +283,80 @@ st.plotly_chart(
     fig4,
     use_container_width=True
 )
-# ======================================
+
+# ==================================================
 # MAPA ESTRATÉGICO
-# ======================================
+# ==================================================
 
-st.subheader(
-    "Mapa Estratégico Territorial"
-)
+if 'LATITUD' in df_filtrado.columns and 'LONGITUD' in df_filtrado.columns:
 
-mapa = df_filtrado.groupby(
-    [
-        'MUNICIPIO',
-        'LATITUD',
-        'LONGITUD'
-    ]
-).agg({
-
-    'RIESGO':'mean',
-
-    'EVENTOS':'sum'
-
-}).reset_index()
-
-fig_map = px.scatter_mapbox(
-
-    mapa,
-
-    lat='LATITUD',
-
-    lon='LONGITUD',
-
-    size='EVENTOS',
-
-    color='RIESGO',
-
-    hover_name='MUNICIPIO',
-
-    zoom=4,
-
-    height=700,
-
-    color_continuous_scale='Reds',
-
-    size_max=30
-)
-
-fig_map.update_layout(
-
-    mapbox_style='carto-darkmatter',
-
-    margin=dict(
-        l=0,
-        r=0,
-        t=0,
-        b=0
+    st.subheader(
+        "Mapa Estratégico Territorial"
     )
-)
 
-st.plotly_chart(
-    fig_map,
-    use_container_width=True
-)
-# ======================================
-# TABLA ESTRATÉGICA
-# ======================================
+    mapa = df_filtrado.groupby(
+        [
+            'MUNICIPIO',
+            'LATITUD',
+            'LONGITUD'
+        ]
+    ).agg({
+
+        'RIESGO': 'mean',
+
+        'EVENTOS': 'sum'
+
+    }).reset_index()
+
+    fig_map = px.scatter_mapbox(
+
+        mapa,
+
+        lat='LATITUD',
+
+        lon='LONGITUD',
+
+        size='EVENTOS',
+
+        color='RIESGO',
+
+        hover_name='MUNICIPIO',
+
+        zoom=4,
+
+        height=700,
+
+        color_continuous_scale='Reds',
+
+        size_max=30
+    )
+
+    fig_map.update_layout(
+
+        mapbox_style='carto-darkmatter',
+
+        margin=dict(
+            l=0,
+            r=0,
+            t=0,
+            b=0
+        )
+    )
+
+    st.plotly_chart(
+        fig_map,
+        use_container_width=True
+    )
+
+# ==================================================
+# TABLA FINAL
+# ==================================================
 
 st.subheader(
     "Vista Estratégica Consolidada"
 )
 
 st.dataframe(
-    df_filtrado.head(100),
+    df_filtrado,
     use_container_width=True
 )
