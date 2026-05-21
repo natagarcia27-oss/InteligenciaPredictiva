@@ -3,7 +3,7 @@ import pandas as pd
 import plotly.express as px
 
 # =========================================================
-# CONFIGURACIÓN GENERAL
+# CONFIGURACIÓN
 # =========================================================
 
 st.set_page_config(
@@ -12,7 +12,7 @@ st.set_page_config(
 )
 
 # =========================================================
-# FUNCIÓN SEGURA CSV
+# FUNCIÓN LECTURA SEGURA CSV
 # =========================================================
 
 def leer_csv_seguro(ruta):
@@ -43,40 +43,80 @@ def leer_csv_seguro(ruta):
 
             continue
 
-    st.error(
-        f"No fue posible leer el archivo: {ruta}"
-    )
-
     return pd.DataFrame()
 
 # =========================================================
-# CARGA DE DATOS
+# LIMPIEZA COLUMNAS
 # =========================================================
 
-@st.cache_data
-def cargar_datos():
+def limpiar_columnas(df):
 
-    return leer_csv_seguro(
-        "riesgo_municipal.csv"
-    )
+    # quitar espacios
 
-@st.cache_data
-def cargar_operacional():
+    df.columns = df.columns.str.strip()
 
-    return leer_csv_seguro(
-        "eventos_operacionales.csv"
-    )
+    # reparar caracteres dañados
+
+    reemplazos = {
+
+        'Ã‘':'Ñ',
+        'Ã“':'Ó',
+        'Ã‰':'É',
+        'Ã':'Í',
+        'Ã':'Á',
+        'Ãš':'Ú'
+    }
+
+    nuevas = []
+
+    for col in df.columns:
+
+        for malo, bueno in reemplazos.items():
+
+            col = col.replace(
+                malo,
+                bueno
+            )
+
+        col = (
+            col.upper()
+            .replace(" ", "_")
+        )
+
+        nuevas.append(col)
+
+    df.columns = nuevas
+
+    return df
 
 # =========================================================
 # CARGAR BASES
 # =========================================================
 
-df = cargar_datos()
+@st.cache_data
+def cargar_predictiva():
+
+    df = leer_csv_seguro(
+        "riesgo_municipal.csv"
+    )
+
+    return limpiar_columnas(df)
+
+@st.cache_data
+def cargar_operacional():
+
+    df = leer_csv_seguro(
+        "eventos_operacionales.csv"
+    )
+
+    return limpiar_columnas(df)
+
+df = cargar_predictiva()
 
 df_op = cargar_operacional()
 
 # =========================================================
-# VALIDAR
+# VALIDACIÓN
 # =========================================================
 
 if df.empty:
@@ -86,36 +126,6 @@ if df.empty:
     )
 
     st.stop()
-
-if df_op.empty:
-
-    st.warning(
-        "No se pudo cargar eventos_operacionales.csv"
-    )
-
-# =========================================================
-# NORMALIZAR COLUMNAS
-# =========================================================
-
-df.columns = df.columns.str.strip()
-
-df.columns = [
-
-    col.upper().replace(" ", "_")
-
-    for col in df.columns
-]
-
-if not df_op.empty:
-
-    df_op.columns = df_op.columns.str.strip()
-
-    df_op.columns = [
-
-        col.upper().replace(" ", "_")
-
-        for col in df_op.columns
-    ]
 
 # =========================================================
 # SIDEBAR
@@ -131,13 +141,11 @@ with st.sidebar.expander(
 
     st.write(df.columns.tolist())
 
-if not df_op.empty:
+with st.sidebar.expander(
+    "Columnas Base Operacional"
+):
 
-    with st.sidebar.expander(
-        "Columnas Base Operacional"
-    ):
-
-        st.write(df_op.columns.tolist())
+    st.write(df_op.columns.tolist())
 
 # =========================================================
 # FILTROS
@@ -187,7 +195,7 @@ if 'AÑO' in df.columns:
     )
 
 # =========================================================
-# FILTRAR DATASET
+# FILTRAR
 # =========================================================
 
 df_filtrado = df.copy()
@@ -222,8 +230,8 @@ st.title(
 )
 
 st.markdown("""
-Plataforma estratégica para análisis predictivo,
-riesgo territorial e inteligencia operacional.
+Plataforma estratégica para análisis territorial,
+inteligencia operacional y prospectiva avanzada.
 """)
 
 # =========================================================
@@ -285,7 +293,7 @@ fig1 = px.bar(
 
     color_continuous_scale='Reds',
 
-    title='Top 20 Municipios Críticos'
+    title='Top Municipios Críticos'
 )
 
 st.plotly_chart(
@@ -297,72 +305,66 @@ st.plotly_chart(
 # MAPA ESTRATÉGICO
 # =========================================================
 
-if (
-    'LATITUD' in df_filtrado.columns
-    and
-    'LONGITUD' in df_filtrado.columns
-):
+st.subheader(
+    "Mapa Estratégico Territorial"
+)
 
-    st.subheader(
-        "Mapa Estratégico Territorial"
+mapa = df_filtrado.groupby(
+    [
+        'MUNICIPIO',
+        'LATITUD',
+        'LONGITUD'
+    ]
+).agg({
+
+    'RIESGO':'mean',
+
+    'EVENTOS':'sum'
+
+}).reset_index()
+
+fig_map = px.scatter_mapbox(
+
+    mapa,
+
+    lat='LATITUD',
+
+    lon='LONGITUD',
+
+    size='EVENTOS',
+
+    color='RIESGO',
+
+    hover_name='MUNICIPIO',
+
+    zoom=4,
+
+    height=700,
+
+    color_continuous_scale='Reds',
+
+    size_max=30
+)
+
+fig_map.update_layout(
+
+    mapbox_style='carto-darkmatter',
+
+    margin=dict(
+        l=0,
+        r=0,
+        t=0,
+        b=0
     )
+)
 
-    mapa = df_filtrado.groupby(
-        [
-            'MUNICIPIO',
-            'LATITUD',
-            'LONGITUD'
-        ]
-    ).agg({
-
-        'RIESGO':'mean',
-
-        'EVENTOS':'sum'
-
-    }).reset_index()
-
-    fig_map = px.scatter_mapbox(
-
-        mapa,
-
-        lat='LATITUD',
-
-        lon='LONGITUD',
-
-        size='EVENTOS',
-
-        color='RIESGO',
-
-        hover_name='MUNICIPIO',
-
-        zoom=4,
-
-        height=700,
-
-        color_continuous_scale='Reds',
-
-        size_max=30
-    )
-
-    fig_map.update_layout(
-
-        mapbox_style='carto-darkmatter',
-
-        margin=dict(
-            l=0,
-            r=0,
-            t=0,
-            b=0
-        )
-    )
-
-    st.plotly_chart(
-        fig_map,
-        use_container_width=True
-    )
+st.plotly_chart(
+    fig_map,
+    use_container_width=True
+)
 
 # =========================================================
-# ALERTAS TEMPRANAS
+# ALERTAS
 # =========================================================
 
 st.subheader(
@@ -371,31 +373,18 @@ st.subheader(
 
 df_alertas = df_filtrado.copy()
 
-if 'IET' in df_alertas.columns:
+df_alertas['IPT'] = (
 
-    df_alertas['IPT'] = (
+    df_alertas['RIESGO'] * 0.5
 
-        df_alertas['RIESGO'] * 0.5
+    +
 
-        +
+    df_alertas['IET'] * 0.3
 
-        df_alertas['IET'] * 0.3
+    +
 
-        +
-
-        df_alertas['EVENTOS'] * 0.2
-    )
-
-else:
-
-    df_alertas['IPT'] = (
-
-        df_alertas['RIESGO'] * 0.7
-
-        +
-
-        df_alertas['EVENTOS'] * 0.3
-    )
+    df_alertas['EVENTOS'] * 0.2
+)
 
 alertas = df_alertas.groupby(
     'MUNICIPIO'
@@ -427,21 +416,114 @@ st.plotly_chart(
 )
 
 # =========================================================
+# DETECTAR COLUMNA ORGANIZACIONAL
+# =========================================================
+
+st.subheader(
+    "Inteligencia Organizacional"
+)
+
+columna_gao = None
+
+candidatas = [
+
+    'GAO',
+
+    'FG/BLOQUE/ESTRUCTURA',
+
+    'FG_BLOQUE_ESTRUCTURA',
+
+    'ESTRUCTURA',
+
+    'SUBESTRUCTURA'
+]
+
+for col in candidatas:
+
+    if col in df_op.columns:
+
+        columna_gao = col
+
+        break
+
+# =========================================================
 # INTELIGENCIA ORGANIZACIONAL
 # =========================================================
 
-if not df_op.empty:
+if columna_gao:
 
-    st.subheader(
-        "Inteligencia Organizacional"
+    st.success(
+        f"Columna organizacional detectada: {columna_gao}"
     )
 
-    st.write(
-        "Columnas detectadas en base operacional:"
+    gao_intel = df_op.groupby(
+        columna_gao
+    ).agg({
+
+        'MUNICIPIO':'nunique',
+
+        'ACTIVIDAD':'nunique'
+
+    }).reset_index()
+
+    gao_intel.columns = [
+
+        'ORGANIZACION',
+
+        'EXPANSION_TERRITORIAL',
+
+        'DIVERSIDAD_TACTICA'
+    ]
+
+    gao_intel['INDICE_ADAPTACION'] = (
+
+        gao_intel['EXPANSION_TERRITORIAL'] * 0.5
+
+        +
+
+        gao_intel['DIVERSIDAD_TACTICA'] * 0.5
     )
 
-    st.write(
-        df_op.columns.tolist()
+    gao_intel = gao_intel.sort_values(
+
+        by='INDICE_ADAPTACION',
+
+        ascending=False
+    )
+
+    st.dataframe(
+        gao_intel,
+        use_container_width=True
+    )
+
+    fig_org = px.scatter(
+
+        gao_intel,
+
+        x='EXPANSION_TERRITORIAL',
+
+        y='DIVERSIDAD_TACTICA',
+
+        size='INDICE_ADAPTACION',
+
+        color='INDICE_ADAPTACION',
+
+        hover_name='ORGANIZACION',
+
+        title='Adaptación y Expansión Organizacional',
+
+        color_continuous_scale='Reds'
+    )
+
+    st.plotly_chart(
+        fig_org,
+        use_container_width=True
+    )
+
+else:
+
+    st.warning(
+        "No se detectó columna organizacional"
     )
 
 # =========================================================
