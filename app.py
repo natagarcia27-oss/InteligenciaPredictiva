@@ -43,7 +43,7 @@ def leer_csv_seguro(ruta):
     return pd.DataFrame()
 
 # =========================================================
-# LIMPIAR COLUMNAS
+# LIMPIEZA COLUMNAS
 # =========================================================
 
 def limpiar_columnas(df):
@@ -74,6 +74,7 @@ def limpiar_columnas(df):
         col = (
             col.upper()
             .replace(" ", "_")
+            .replace("-", "_")
         )
 
         nuevas.append(col)
@@ -118,6 +119,53 @@ if df.empty:
     )
 
     st.stop()
+
+# =========================================================
+# DETECTAR COLUMNAS OPERACIONALES
+# =========================================================
+
+def detectar_columna(candidatas, dataframe):
+
+    for col in candidatas:
+
+        if col in dataframe.columns:
+
+            return col
+
+    return None
+
+COL_GAO = detectar_columna(
+
+    [
+        'GAO',
+        'FG/BLOQUE/ESTRUCTURA',
+        'FG_BLOQUE_ESTRUCTURA',
+        'ESTRUCTURA',
+        'SUBESTRUCTURA'
+    ],
+
+    df_op
+)
+
+COL_ACTIVIDAD = detectar_columna(
+
+    [
+        'ACTIVIDAD',
+        'TIPO_DE_ACTIVIDAD'
+    ],
+
+    df_op
+)
+
+COL_AFECTACION = detectar_columna(
+
+    [
+        'TIPO_DE_AFECTACIÓN',
+        'TIPO_DE_AFECTACION'
+    ],
+
+    df_op
+)
 
 # =========================================================
 # SIDEBAR
@@ -222,15 +270,15 @@ st.title(
 )
 
 st.markdown("""
-Plataforma avanzada para:
+### Plataforma Integrada de:
 
-- Inteligencia operacional
-- Prospectiva territorial
-- Detección de riesgo
-- Expansión organizacional
-- Corredores estratégicos
-- Alertas tempranas
-- Simulación operacional
+- Inteligencia Operacional
+- Prospectiva Territorial
+- Riesgo Estratégico
+- Adaptación Organizacional
+- Corredores Críticos
+- Alertas Tempranas
+- Simulación Prospectiva
 """)
 
 # =========================================================
@@ -315,12 +363,16 @@ st.subheader(
 
 temporal = df_filtrado.groupby(
     ['AÑO', 'SEMANA']
-).size().reset_index(name='EVENTOS')
+).agg({
+
+    'EVENTOS':'sum'
+
+}).reset_index()
 
 temporal['PERIODO'] = (
 
     temporal['AÑO'].astype(str)
-    + '-'
+    + '-S'
     + temporal['SEMANA'].astype(str)
 )
 
@@ -510,33 +562,6 @@ alertas = alertas.sort_values(
     ascending=False
 )
 
-def clasificar_alerta(valor):
-
-    if valor >= 15:
-
-        return "🔴 Crítico"
-
-    elif valor >= 8:
-
-        return "🟠 Alto"
-
-    elif valor >= 4:
-
-        return "🟡 Atención"
-
-    else:
-
-        return "🟢 Estable"
-
-alertas['NIVEL_ALERTA'] = alertas[
-    'IPT'
-].apply(clasificar_alerta)
-
-st.dataframe(
-    alertas.head(30),
-    use_container_width=True
-)
-
 fig_alertas = px.bar(
 
     alertas.head(20),
@@ -545,9 +570,11 @@ fig_alertas = px.bar(
 
     y='IPT',
 
-    color='NIVEL_ALERTA',
+    color='IPT',
 
-    title='Municipios Bajo Mayor Presión Territorial'
+    color_continuous_scale='Reds',
+
+    title='Presión Territorial'
 )
 
 st.plotly_chart(
@@ -556,49 +583,22 @@ st.plotly_chart(
 )
 
 # =========================================================
-# DETECCIÓN ORGANIZACIONAL
+# INTELIGENCIA ORGANIZACIONAL
 # =========================================================
 
 st.subheader(
     "Inteligencia Organizacional"
 )
 
-columna_gao = None
-
-candidatas = [
-
-    'GAO',
-
-    'FG/BLOQUE/ESTRUCTURA',
-
-    'FG_BLOQUE_ESTRUCTURA',
-
-    'ESTRUCTURA',
-
-    'SUBESTRUCTURA'
-]
-
-for col in candidatas:
-
-    if col in df_op.columns:
-
-        columna_gao = col
-
-        break
-
-if columna_gao:
-
-    st.success(
-        f"Columna organizacional detectada: {columna_gao}"
-    )
+if COL_GAO and COL_ACTIVIDAD:
 
     gao_intel = df_op.groupby(
-        columna_gao
+        COL_GAO
     ).agg({
 
         'MUNICIPIO':'nunique',
 
-        'ACTIVIDAD':'nunique'
+        COL_ACTIVIDAD:'nunique'
 
     }).reset_index()
 
@@ -660,19 +660,19 @@ if columna_gao:
 # MUTACIÓN OPERACIONAL
 # =========================================================
 
-if columna_gao:
+st.subheader(
+    "Detección de Mutación Operacional"
+)
 
-    st.subheader(
-        "Detección de Mutación Operacional"
-    )
+if COL_GAO and COL_ACTIVIDAD and COL_AFECTACION:
 
     mutacion = df_op.groupby(
-        columna_gao
+        COL_GAO
     ).agg({
 
-        'ACTIVIDAD':'nunique',
+        COL_ACTIVIDAD:'nunique',
 
-        'TIPO_DE_AFECTACIÓN':'nunique',
+        COL_AFECTACION:'nunique',
 
         'MUNICIPIO':'nunique'
 
@@ -773,9 +773,7 @@ corredores['INDICE_CORREDOR'] = (
 )
 
 corredores = corredores.sort_values(
-
     by='INDICE_CORREDOR',
-
     ascending=False
 )
 
@@ -815,7 +813,7 @@ st.plotly_chart(
     use_container_width=True
 )
 
-fig_bar_corr = px.bar(
+fig_corr_bar = px.bar(
 
     top_corredores.head(20),
 
@@ -831,12 +829,12 @@ fig_bar_corr = px.bar(
 )
 
 st.plotly_chart(
-    fig_bar_corr,
+    fig_corr_bar,
     use_container_width=True
 )
 
 # =========================================================
-# PROSPECTIVA Y SIMULACIÓN
+# PROSPECTIVA TERRITORIAL
 # =========================================================
 
 st.subheader(
@@ -869,9 +867,7 @@ prospectiva['RIESGO_FUTURO_30D'] = (
 )
 
 prospectiva = prospectiva.sort_values(
-
     by='RIESGO_FUTURO_30D',
-
     ascending=False
 )
 
