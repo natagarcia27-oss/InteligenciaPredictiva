@@ -1,30 +1,27 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+import plotly.graph_objects as go
 
 # =========================================================
-# CONFIGURACIÓN
+# CONFIGURACIÓN GENERAL
 # =========================================================
 
 st.set_page_config(
-    page_title="Inteligencia Territorial",
+    page_title="Sistema Inteligencia Predictiva Territorial",
     layout="wide"
 )
 
 # =========================================================
-# FUNCIÓN LECTURA SEGURA CSV
+# FUNCIONES
 # =========================================================
 
 def leer_csv_seguro(ruta):
 
     codificaciones = [
-
         'utf-8',
-
         'latin1',
-
         'cp1252',
-
         'ISO-8859-1'
     ]
 
@@ -46,16 +43,12 @@ def leer_csv_seguro(ruta):
     return pd.DataFrame()
 
 # =========================================================
-# LIMPIEZA COLUMNAS
+# LIMPIAR COLUMNAS
 # =========================================================
 
 def limpiar_columnas(df):
 
-    # quitar espacios
-
     df.columns = df.columns.str.strip()
-
-    # reparar caracteres dañados
 
     reemplazos = {
 
@@ -112,7 +105,6 @@ def cargar_operacional():
     return limpiar_columnas(df)
 
 df = cargar_predictiva()
-
 df_op = cargar_operacional()
 
 # =========================================================
@@ -195,7 +187,7 @@ if 'AÑO' in df.columns:
     )
 
 # =========================================================
-# FILTRAR
+# FILTRAR BASE
 # =========================================================
 
 df_filtrado = df.copy()
@@ -230,8 +222,15 @@ st.title(
 )
 
 st.markdown("""
-Plataforma estratégica para análisis territorial,
-inteligencia operacional y prospectiva avanzada.
+Plataforma avanzada para:
+
+- Inteligencia operacional
+- Prospectiva territorial
+- Detección de riesgo
+- Expansión organizacional
+- Corredores estratégicos
+- Alertas tempranas
+- Simulación operacional
 """)
 
 # =========================================================
@@ -242,7 +241,7 @@ st.subheader(
     "Indicadores Estratégicos"
 )
 
-col1, col2, col3, col4 = st.columns(4)
+col1, col2, col3, col4, col5 = st.columns(5)
 
 col1.metric(
     "Municipios",
@@ -262,6 +261,11 @@ col3.metric(
 col4.metric(
     "GAO Presentes",
     int(df_filtrado['GAO_PRESENTES'].mean())
+)
+
+col5.metric(
+    "IET Promedio",
+    round(df_filtrado['IET'].mean(), 2)
 )
 
 # =========================================================
@@ -298,6 +302,117 @@ fig1 = px.bar(
 
 st.plotly_chart(
     fig1,
+    use_container_width=True
+)
+
+# =========================================================
+# EVOLUCIÓN TEMPORAL
+# =========================================================
+
+st.subheader(
+    "Evolución Temporal"
+)
+
+temporal = df_filtrado.groupby(
+    ['AÑO', 'SEMANA']
+).size().reset_index(name='EVENTOS')
+
+temporal['PERIODO'] = (
+
+    temporal['AÑO'].astype(str)
+    + '-'
+    + temporal['SEMANA'].astype(str)
+)
+
+fig2 = px.line(
+
+    temporal,
+
+    x='PERIODO',
+
+    y='EVENTOS',
+
+    markers=True,
+
+    title='Comportamiento Temporal'
+)
+
+st.plotly_chart(
+    fig2,
+    use_container_width=True
+)
+
+# =========================================================
+# ESCALAMIENTO TERRITORIAL
+# =========================================================
+
+st.subheader(
+    "Escalamiento Territorial"
+)
+
+esc = df_filtrado.groupby(
+    'MUNICIPIO'
+)['IET'].mean().reset_index()
+
+esc = esc.sort_values(
+    by='IET',
+    ascending=False
+).head(20)
+
+fig3 = px.bar(
+
+    esc,
+
+    x='MUNICIPIO',
+
+    y='IET',
+
+    color='IET',
+
+    color_continuous_scale='Oranges',
+
+    title='Índice Escalamiento Territorial'
+)
+
+st.plotly_chart(
+    fig3,
+    use_container_width=True
+)
+
+# =========================================================
+# EXPOSICIÓN OPERACIONAL
+# =========================================================
+
+st.subheader(
+    "Exposición Operacional"
+)
+
+expo = df_filtrado.groupby(
+    'MUNICIPIO'
+)['UNIDADES_EXPUESTAS'].mean().reset_index()
+
+expo = expo.sort_values(
+    by='UNIDADES_EXPUESTAS',
+    ascending=False
+).head(20)
+
+fig4 = px.bar(
+
+    expo,
+
+    x='MUNICIPIO',
+
+    y='UNIDADES_EXPUESTAS',
+
+    color='UNIDADES_EXPUESTAS',
+
+    color_continuous_scale='Blues',
+
+    title='Municipios con Mayor Exposición'
+)
+
+st.plotly_chart(
+    fig4,
     use_container_width=True
 )
 
@@ -364,7 +479,7 @@ st.plotly_chart(
 )
 
 # =========================================================
-# ALERTAS
+# ALERTAS TEMPRANAS
 # =========================================================
 
 st.subheader(
@@ -395,6 +510,33 @@ alertas = alertas.sort_values(
     ascending=False
 )
 
+def clasificar_alerta(valor):
+
+    if valor >= 15:
+
+        return "🔴 Crítico"
+
+    elif valor >= 8:
+
+        return "🟠 Alto"
+
+    elif valor >= 4:
+
+        return "🟡 Atención"
+
+    else:
+
+        return "🟢 Estable"
+
+alertas['NIVEL_ALERTA'] = alertas[
+    'IPT'
+].apply(clasificar_alerta)
+
+st.dataframe(
+    alertas.head(30),
+    use_container_width=True
+)
+
 fig_alertas = px.bar(
 
     alertas.head(20),
@@ -403,11 +545,9 @@ fig_alertas = px.bar(
 
     y='IPT',
 
-    color='IPT',
+    color='NIVEL_ALERTA',
 
-    color_continuous_scale='Reds',
-
-    title='Presión Territorial'
+    title='Municipios Bajo Mayor Presión Territorial'
 )
 
 st.plotly_chart(
@@ -416,7 +556,7 @@ st.plotly_chart(
 )
 
 # =========================================================
-# DETECTAR COLUMNA ORGANIZACIONAL
+# DETECCIÓN ORGANIZACIONAL
 # =========================================================
 
 st.subheader(
@@ -445,10 +585,6 @@ for col in candidatas:
         columna_gao = col
 
         break
-
-# =========================================================
-# INTELIGENCIA ORGANIZACIONAL
-# =========================================================
 
 if columna_gao:
 
@@ -520,11 +656,84 @@ if columna_gao:
         use_container_width=True
     )
 
-else:
+# =========================================================
+# MUTACIÓN OPERACIONAL
+# =========================================================
 
-    st.warning(
-        "No se detectó columna organizacional"
+if columna_gao:
+
+    st.subheader(
+        "Detección de Mutación Operacional"
     )
+
+    mutacion = df_op.groupby(
+        columna_gao
+    ).agg({
+
+        'ACTIVIDAD':'nunique',
+
+        'TIPO_DE_AFECTACIÓN':'nunique',
+
+        'MUNICIPIO':'nunique'
+
+    }).reset_index()
+
+    mutacion.columns = [
+
+        'ORGANIZACION',
+
+        'DIVERSIDAD_ACTIVIDAD',
+
+        'DIVERSIDAD_AFECTACION',
+
+        'EXPANSION_TERRITORIAL'
+    ]
+
+    mutacion['INDICE_MUTACION'] = (
+
+        mutacion['DIVERSIDAD_ACTIVIDAD'] * 0.4
+
+        +
+
+        mutacion['DIVERSIDAD_AFECTACION'] * 0.3
+
+        +
+
+        mutacion['EXPANSION_TERRITORIAL'] * 0.3
+    )
+
+    mutacion = mutacion.sort_values(
+
+        by='INDICE_MUTACION',
+
+        ascending=False
+    )
+
+    st.dataframe(
+        mutacion,
+        use_container_width=True
+    )
+
+    fig_mut = px.bar(
+
+        mutacion.head(20),
+
+        x='ORGANIZACION',
+
+        y='INDICE_MUTACION',
+
+        color='INDICE_MUTACION',
+
+        color_continuous_scale='Reds',
+
+        title='Índice de Mutación Operacional'
+    )
+
+    st.plotly_chart(
+        fig_mut,
+        use_container_width=True
+    )
+
 # =========================================================
 # CORREDORES ESTRATÉGICOS
 # =========================================================
@@ -533,14 +742,10 @@ st.subheader(
     "Corredores Estratégicos"
 )
 
-# ---------------------------------------------------------
-# CREAR INTENSIDAD TERRITORIAL
-# ---------------------------------------------------------
-
 corredores = df_filtrado.groupby(
     [
         'DEPARTAMENTO',
-        'MUNICIPIO'
+        'MUNICIPIO',
         'LATITUD',
         'LONGITUD'
     ]
@@ -553,10 +758,6 @@ corredores = df_filtrado.groupby(
     'IET':'mean'
 
 }).reset_index()
-
-# ---------------------------------------------------------
-# ÍNDICE TERRITORIAL
-# ---------------------------------------------------------
 
 corredores['INDICE_CORREDOR'] = (
 
@@ -571,10 +772,6 @@ corredores['INDICE_CORREDOR'] = (
     corredores['IET'] * 10
 )
 
-# ---------------------------------------------------------
-# ORDENAR
-# ---------------------------------------------------------
-
 corredores = corredores.sort_values(
 
     by='INDICE_CORREDOR',
@@ -582,32 +779,20 @@ corredores = corredores.sort_values(
     ascending=False
 )
 
-# ---------------------------------------------------------
-# TOP CORREDORES
-# ---------------------------------------------------------
-
 top_corredores = corredores.head(30)
-
-# ---------------------------------------------------------
-# TABLA
-# ---------------------------------------------------------
 
 st.dataframe(
     top_corredores,
     use_container_width=True
 )
 
-# ---------------------------------------------------------
-# MAPA CALOR
-# ---------------------------------------------------------
-
-fig_corredor = px.density_mapbox(
+fig_corr = px.density_mapbox(
 
     top_corredores,
 
-    lat='LATITUD' if 'LATITUD' in top_corredores.columns else None,
+    lat='LATITUD',
 
-    lon='LONGITUD' if 'LONGITUD' in top_corredores.columns else None,
+    lon='LONGITUD',
 
     z='INDICE_CORREDOR',
 
@@ -626,13 +811,9 @@ fig_corredor = px.density_mapbox(
 )
 
 st.plotly_chart(
-    fig_corredor,
+    fig_corr,
     use_container_width=True
 )
-
-# ---------------------------------------------------------
-# GRÁFICO BARRAS
-# ---------------------------------------------------------
 
 fig_bar_corr = px.bar(
 
@@ -653,6 +834,72 @@ st.plotly_chart(
     fig_bar_corr,
     use_container_width=True
 )
+
+# =========================================================
+# PROSPECTIVA Y SIMULACIÓN
+# =========================================================
+
+st.subheader(
+    "Prospectiva Territorial"
+)
+
+prospectiva = df_filtrado.groupby(
+    'MUNICIPIO'
+).agg({
+
+    'RIESGO':'mean',
+
+    'EVENTOS':'sum',
+
+    'IET':'mean'
+
+}).reset_index()
+
+prospectiva['RIESGO_FUTURO_30D'] = (
+
+    prospectiva['RIESGO'] * 0.5
+
+    +
+
+    prospectiva['EVENTOS'] * 0.1
+
+    +
+
+    prospectiva['IET'] * 0.4
+)
+
+prospectiva = prospectiva.sort_values(
+
+    by='RIESGO_FUTURO_30D',
+
+    ascending=False
+)
+
+st.dataframe(
+    prospectiva.head(30),
+    use_container_width=True
+)
+
+fig_future = px.bar(
+
+    prospectiva.head(20),
+
+    x='MUNICIPIO',
+
+    y='RIESGO_FUTURO_30D',
+
+    color='RIESGO_FUTURO_30D',
+
+    color_continuous_scale='Reds',
+
+    title='Proyección Riesgo Próximos 30 Días'
+)
+
+st.plotly_chart(
+    fig_future,
+    use_container_width=True
+)
+
 # =========================================================
 # TABLA FINAL
 # =========================================================
