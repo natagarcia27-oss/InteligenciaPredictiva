@@ -24,10 +24,24 @@ def cargar_datos():
 
     return df
 
-df = cargar_datos()
+@st.cache_data
+def cargar_operacional():
+
+    df_op = pd.read_csv(
+        "eventos_operacionales.csv"
+    )
+
+    return df_op
 
 # =========================================================
-# LIMPIEZA Y NORMALIZACIÓN COLUMNAS
+# CARGAR DATASETS
+# =========================================================
+
+df = cargar_datos()
+df_op = cargar_operacional()
+
+# =========================================================
+# NORMALIZAR COLUMNAS
 # =========================================================
 
 df.columns = df.columns.str.strip()
@@ -37,23 +51,34 @@ df.columns = [
     for col in df.columns
 ]
 
+df_op.columns = df_op.columns.str.strip()
+
+df_op.columns = [
+    col.upper().replace(" ", "_")
+    for col in df_op.columns
+]
+
 # =========================================================
-# DEBUG COLUMNAS
+# SIDEBAR
 # =========================================================
 
 st.sidebar.title("Filtros Estratégicos")
 
-with st.sidebar.expander("Columnas detectadas"):
+with st.sidebar.expander("Columnas Base Predictiva"):
 
     st.write(df.columns.tolist())
 
+with st.sidebar.expander("Columnas Base Operacional"):
+
+    st.write(df_op.columns.tolist())
+
 # =========================================================
-# FILTROS
+# FILTROS BASE PREDICTIVA
 # =========================================================
 
-# ---------------------------------
+# -----------------------------------------
 # DEPARTAMENTO
-# ---------------------------------
+# -----------------------------------------
 
 if 'DEPARTAMENTO' in df.columns:
 
@@ -70,9 +95,9 @@ else:
 
     dep_sel = []
 
-# ---------------------------------
+# -----------------------------------------
 # MUNICIPIO
-# ---------------------------------
+# -----------------------------------------
 
 if 'MUNICIPIO' in df.columns:
 
@@ -89,9 +114,9 @@ else:
 
     mun_sel = []
 
-# ---------------------------------
+# -----------------------------------------
 # AÑO
-# ---------------------------------
+# -----------------------------------------
 
 if 'AÑO' in df.columns:
 
@@ -141,13 +166,16 @@ st.title(
 )
 
 st.markdown("""
-Plataforma estratégica para análisis territorial,
-riesgo operacional y prospectiva de amenazas.
+Plataforma estratégica para análisis predictivo,
+riesgo territorial, inteligencia operacional
+y prospectiva de amenazas.
 """)
 
 # =========================================================
 # KPIs
 # =========================================================
+
+st.subheader("Indicadores Estratégicos")
 
 col1, col2, col3, col4 = st.columns(4)
 
@@ -183,7 +211,11 @@ if 'GAO_PRESENTES' in df_filtrado.columns:
 # MUNICIPIOS CRÍTICOS
 # =========================================================
 
-if 'MUNICIPIO' in df_filtrado.columns and 'RIESGO' in df_filtrado.columns:
+if (
+    'MUNICIPIO' in df_filtrado.columns
+    and
+    'RIESGO' in df_filtrado.columns
+):
 
     st.subheader(
         "Municipios de Mayor Riesgo"
@@ -222,7 +254,11 @@ if 'MUNICIPIO' in df_filtrado.columns and 'RIESGO' in df_filtrado.columns:
 # EVOLUCIÓN TEMPORAL
 # =========================================================
 
-if 'AÑO' in df_filtrado.columns and 'SEMANA' in df_filtrado.columns:
+if (
+    'AÑO' in df_filtrado.columns
+    and
+    'SEMANA' in df_filtrado.columns
+):
 
     st.subheader(
         "Evolución Temporal"
@@ -261,7 +297,11 @@ if 'AÑO' in df_filtrado.columns and 'SEMANA' in df_filtrado.columns:
 # ESCALAMIENTO TERRITORIAL
 # =========================================================
 
-if 'IET' in df_filtrado.columns and 'MUNICIPIO' in df_filtrado.columns:
+if (
+    'IET' in df_filtrado.columns
+    and
+    'MUNICIPIO' in df_filtrado.columns
+):
 
     st.subheader(
         "Escalamiento Territorial"
@@ -496,111 +536,169 @@ if 'RIESGO' in df_filtrado.columns:
     )
 
 # =========================================================
-# ANÁLISIS AVANZADO GAO
+# INTELIGENCIA ORGANIZACIONAL
 # =========================================================
 
-if 'GAO' in df_filtrado.columns:
+st.subheader(
+    "Inteligencia Organizacional"
+)
 
-    st.subheader(
-        "Análisis Estratégico GAO"
+# ---------------------------------------------------------
+# DETECTAR COLUMNA ORGANIZACIONAL
+# ---------------------------------------------------------
+
+columna_gao = None
+
+candidatas = [
+
+    'GAO',
+
+    'FG/BLOQUE/ESTRUCTURA',
+
+    'FG_BLOQUE_ESTRUCTURA',
+
+    'ESTRUCTURA',
+
+    'SUBESTRUCTURA'
+]
+
+for col in candidatas:
+
+    col_normalizada = col.upper().replace(" ", "_")
+
+    if col_normalizada in df_op.columns:
+
+        columna_gao = col_normalizada
+
+        break
+
+# ---------------------------------------------------------
+# VALIDAR
+# ---------------------------------------------------------
+
+if columna_gao is not None:
+
+    st.success(
+        f"Columna organizacional detectada: {columna_gao}"
     )
 
-    gao_stats = df_filtrado.groupby(
-        'GAO'
-    ).agg({
+    # ---------------------------------------------
+    # MÉTRICAS ORGANIZACIONALES
+    # ---------------------------------------------
 
-        'EVENTOS': 'sum',
+    columnas_agg = {}
 
-        'MUNICIPIO': 'nunique',
+    if 'MUNICIPIO' in df_op.columns:
+        columnas_agg['MUNICIPIO'] = 'nunique'
 
-        'ACTIVIDAD': 'nunique',
+    if 'ACTIVIDAD' in df_op.columns:
+        columnas_agg['ACTIVIDAD'] = 'nunique'
 
-        'RIESGO': 'mean'
+    gao_intel = df_op.groupby(
+        columna_gao
+    ).agg(columnas_agg).reset_index()
 
-    }).reset_index()
+    # ---------------------------------------------
+    # RENOMBRAR
+    # ---------------------------------------------
 
-    gao_stats.columns = [
+    nombres = [columna_gao]
 
-        'GAO',
+    if 'MUNICIPIO' in columnas_agg:
+        nombres.append('EXPANSION_TERRITORIAL')
 
-        'EVENTOS',
+    if 'ACTIVIDAD' in columnas_agg:
+        nombres.append('DIVERSIDAD_TACTICA')
 
-        'MUNICIPIOS_OCUPADOS',
+    gao_intel.columns = nombres
 
-        'DIVERSIDAD_TACTICA',
+    # ---------------------------------------------
+    # ÍNDICE ADAPTACIÓN
+    # ---------------------------------------------
 
-        'RIESGO_PROMEDIO'
-    ]
+    if (
+        'EXPANSION_TERRITORIAL' in gao_intel.columns
+        and
+        'DIVERSIDAD_TACTICA' in gao_intel.columns
+    ):
 
-    gao_stats['INDICE_ADAPTACION'] = (
+        gao_intel['INDICE_ADAPTACION'] = (
 
-        gao_stats['DIVERSIDAD_TACTICA'] * 0.6
+            gao_intel['EXPANSION_TERRITORIAL'] * 0.5
 
-        +
+            +
 
-        gao_stats['MUNICIPIOS_OCUPADOS'] * 0.4
-    )
+            gao_intel['DIVERSIDAD_TACTICA'] * 0.5
+        )
 
-    gao_stats = gao_stats.sort_values(
+    elif 'EXPANSION_TERRITORIAL' in gao_intel.columns:
+
+        gao_intel['INDICE_ADAPTACION'] = (
+            gao_intel['EXPANSION_TERRITORIAL']
+        )
+
+    else:
+
+        gao_intel['INDICE_ADAPTACION'] = 1
+
+    # ---------------------------------------------
+    # ORDENAR
+    # ---------------------------------------------
+
+    gao_intel = gao_intel.sort_values(
 
         by='INDICE_ADAPTACION',
 
         ascending=False
     )
 
+    # ---------------------------------------------
+    # TABLA
+    # ---------------------------------------------
+
     st.dataframe(
-        gao_stats,
+        gao_intel,
         use_container_width=True
     )
 
-    fig_gao = px.bar(
+    # ---------------------------------------------
+    # GRÁFICO
+    # ---------------------------------------------
 
-        gao_stats,
+    if (
+        'EXPANSION_TERRITORIAL' in gao_intel.columns
+        and
+        'DIVERSIDAD_TACTICA' in gao_intel.columns
+    ):
 
-        x='GAO',
+        fig_org = px.scatter(
 
-        y='MUNICIPIOS_OCUPADOS',
+            gao_intel,
 
-        color='INDICE_ADAPTACION',
+            x='EXPANSION_TERRITORIAL',
 
-        title='Expansión Territorial y Adaptación GAO',
+            y='DIVERSIDAD_TACTICA',
 
-        color_continuous_scale='Viridis'
-    )
+            size='INDICE_ADAPTACION',
 
-    st.plotly_chart(
-        fig_gao,
-        use_container_width=True
-    )
+            color='INDICE_ADAPTACION',
 
-    fig_tactica = px.scatter(
+            hover_name=columna_gao,
 
-        gao_stats,
+            title='Adaptación y Expansión Organizacional',
 
-        x='MUNICIPIOS_OCUPADOS',
+            color_continuous_scale='Reds'
+        )
 
-        y='DIVERSIDAD_TACTICA',
-
-        size='EVENTOS',
-
-        color='RIESGO_PROMEDIO',
-
-        hover_name='GAO',
-
-        title='Capacidad Adaptativa y Expansión Territorial',
-
-        color_continuous_scale='Reds'
-    )
-
-    st.plotly_chart(
-        fig_tactica,
-        use_container_width=True
-    )
+        st.plotly_chart(
+            fig_org,
+            use_container_width=True
+        )
 
 else:
 
     st.warning(
-        "La columna GAO no existe en el dataset"
+        "No se detectó columna organizacional válida"
     )
 
 # =========================================================
