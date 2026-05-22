@@ -1,7 +1,12 @@
 # =========================================================
 # CENTRO DE FUSIÓN GEOESPACIAL E INTELIGENCIA TERRITORIAL
-# VERSION FINAL OPERACIONAL ESTABLE
-# RELEASE FINAL
+# VERSION FINAL ENTERPRISE MODULAR ESTABLE
+# CORRECCION:
+# - SESSIONINFO ERROR
+# - FRONTEND STREAMLIT
+# - OPTIMIZACION MAPAS
+# - INTERFAZ MODULAR
+# - RENDER ESTABLE
 # =========================================================
 
 # =========================================================
@@ -31,7 +36,8 @@ import networkx as nx
 st.set_page_config(
 
     page_title="Fusion Territorial Estratégica",
-    layout="wide"
+    layout="wide",
+    initial_sidebar_state="expanded"
 
 )
 
@@ -48,7 +54,7 @@ st.markdown("""
     color: white;
 }
 
-h1,h2,h3 {
+h1,h2,h3,h4 {
     color: #58a6ff;
 }
 
@@ -58,6 +64,10 @@ h1,h2,h3 {
 
 section[data-testid="stSidebar"] {
     background-color: #111827;
+}
+
+.block-container {
+    padding-top: 2rem;
 }
 
 </style>
@@ -126,7 +136,7 @@ def detectar_columna(lista, dataframe):
     return None
 
 # =========================================================
-# CARGA DATOS
+# CARGA
 # =========================================================
 
 @st.cache_data
@@ -346,7 +356,7 @@ df_filtrado['ALERTA'] = df_filtrado[
 ].apply(alerta)
 
 # =========================================================
-# TITULO
+# HEADER
 # =========================================================
 
 st.title(
@@ -406,589 +416,494 @@ c8.metric(
 )
 
 # =========================================================
-# MAPA GEOESTRATEGICO
+# TABS MODULARES
 # =========================================================
 
-if all(existe(df_filtrado,c) for c in [
+tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
 
-    'LATITUD',
-    'LONGITUD'
-]):
+    "GEOINT",
+    "IA PREDICTIVA",
+    "PROSPECTIVA",
+    "REDES",
+    "ALERTAS",
+    "OPERACIONAL"
 
-    st.subheader(
-        "Mapa Geoestratégico"
-    )
-
-    fig_map = px.scatter_mapbox(
-
-        df_filtrado,
-
-        lat='LATITUD',
-
-        lon='LONGITUD',
-
-        color='PRIORIDAD_ESTRATEGICA',
-
-        size='EVENTOS',
-
-        hover_name='MUNICIPIO',
-
-        zoom=4,
-
-        height=700,
-
-        color_continuous_scale='Turbo'
-    )
-
-    fig_map.update_layout(
-        mapbox_style='carto-darkmatter'
-    )
-
-    st.plotly_chart(
-        fig_map,
-        use_container_width=True
-    )
+])
 
 # =========================================================
-# MAPA TEMPORAL DINAMICO
+# TAB GEOINT
 # =========================================================
 
-if existe(df_filtrado,'SEMANA') and all(
+with tab1:
 
-    existe(df_filtrado,c)
-
-    for c in ['LATITUD','LONGITUD']
-
-):
-
-    st.subheader(
-        "Mapa Temporal Dinámico"
+    st.header(
+        "Plataforma GEOINT"
     )
 
-    fig_time = px.scatter_mapbox(
+    if all(existe(df_filtrado,c) for c in [
 
-        df_filtrado,
+        'LATITUD',
+        'LONGITUD'
+    ]):
 
-        lat='LATITUD',
+        st.subheader(
+            "Mapa Geoestratégico"
+        )
 
-        lon='LONGITUD',
+        fig_map = px.scatter_mapbox(
 
-        color='RIESGO_EVOLUTIVO',
+            df_filtrado,
 
-        size='EVENTOS',
+            lat='LATITUD',
+            lon='LONGITUD',
 
-        animation_frame='SEMANA',
+            color='PRIORIDAD_ESTRATEGICA',
 
-        hover_name='MUNICIPIO',
+            size='EVENTOS',
 
-        zoom=4,
+            hover_name='MUNICIPIO',
 
-        height=700,
+            zoom=4,
 
-        color_continuous_scale='Turbo'
-    )
+            height=500,
 
-    fig_time.update_layout(
-        mapbox_style='carto-darkmatter'
-    )
+            color_continuous_scale='Turbo'
+        )
 
-    st.plotly_chart(
-        fig_time,
-        use_container_width=True
-    )
+        fig_map.update_layout(
+            mapbox_style='carto-darkmatter'
+        )
 
-# =========================================================
-# MAPA DENSIDAD CRIMINAL
-# =========================================================
+        st.plotly_chart(
+            fig_map,
+            use_container_width=True
+        )
 
-if all(existe(df_filtrado,c) for c in [
+        st.subheader(
+            "Mapa Densidad Criminal"
+        )
 
-    'LATITUD',
-    'LONGITUD'
-]):
+        fig_density = px.density_mapbox(
 
-    st.subheader(
-        "Mapa de Densidad Criminal"
-    )
+            df_filtrado,
 
-    fig_density = px.density_mapbox(
+            lat='LATITUD',
+            lon='LONGITUD',
 
-        df_filtrado,
+            z='RIESGO_EVOLUTIVO',
 
-        lat='LATITUD',
+            radius=35,
 
-        lon='LONGITUD',
+            zoom=4,
 
-        z='RIESGO_EVOLUTIVO',
+            height=500,
 
-        radius=45,
+            mapbox_style='carto-darkmatter'
+        )
 
-        zoom=4,
-
-        height=700,
-
-        mapbox_style='carto-darkmatter'
-    )
-
-    st.plotly_chart(
-        fig_density,
-        use_container_width=True
-    )
+        st.plotly_chart(
+            fig_density,
+            use_container_width=True
+        )
 
 # =========================================================
-# MATRIZ ESTRATEGICA
+# TAB IA
 # =========================================================
 
-st.subheader(
-    "Matriz Estratégica"
-)
+with tab2:
 
-fig_matrix = px.scatter(
-
-    df_filtrado,
-
-    x='RIESGO_EVOLUTIVO',
-
-    y='PRIORIDAD_ESTRATEGICA',
-
-    size='EVENTOS',
-
-    color='PRIORIDAD_ESTRATEGICA',
-
-    hover_name='MUNICIPIO',
-
-    color_continuous_scale='Turbo'
-)
-
-st.plotly_chart(
-    fig_matrix,
-    use_container_width=True
-)
-
-# =========================================================
-# CAPACIDAD TRANSFORMACION GAO
-# =========================================================
-
-if COL_GAO:
-
-    st.subheader(
-        "Capacidad de Innovación y Transformación GAO"
-    )
-
-    gao_stats = df_op.groupby(
-        COL_GAO,
-        as_index=False
-    ).size()
-
-    gao_stats.columns = [
-        'GAO',
-        'ACTIVIDAD_OPERACIONAL'
-    ]
-
-    gao_stats['CAPACIDAD_TRANSFORMACION'] = (
-
-        gao_stats['ACTIVIDAD_OPERACIONAL']
-        /
-        gao_stats['ACTIVIDAD_OPERACIONAL'].max()
-
-    ) * 100
-
-    fig_gao = px.bar(
-
-        gao_stats.sort_values(
-            by='CAPACIDAD_TRANSFORMACION',
-            ascending=False
-        ).head(15),
-
-        x='GAO',
-
-        y='CAPACIDAD_TRANSFORMACION',
-
-        color='CAPACIDAD_TRANSFORMACION',
-
-        color_continuous_scale='Turbo'
-    )
-
-    st.plotly_chart(
-        fig_gao,
-        use_container_width=True
-    )
-
-# =========================================================
-# ESCENARIOS PROSPECTIVOS
-# =========================================================
-
-st.subheader(
-    "Escenarios Prospectivos"
-)
-
-prospectiva = df_filtrado.groupby(
-    'MUNICIPIO',
-    as_index=False
-).agg({
-
-    'EVENTOS':'sum',
-
-    'RIESGO':'mean',
-
-    'GAO_PRESENTES':'mean',
-
-    'UNIDADES_EXPUESTAS':'mean'
-})
-
-prospectiva['ESCENARIO_CRITICO'] = (
-
-    prospectiva['EVENTOS'] * 0.35 +
-
-    prospectiva['RIESGO'] * 0.35 +
-
-    prospectiva['GAO_PRESENTES'] * 0.20 +
-
-    prospectiva['UNIDADES_EXPUESTAS'] * 0.10
-) * 1.40
-
-fig_prosp = px.bar(
-
-    prospectiva.sort_values(
-        by='ESCENARIO_CRITICO',
-        ascending=False
-    ).head(20),
-
-    x='MUNICIPIO',
-
-    y='ESCENARIO_CRITICO',
-
-    color='ESCENARIO_CRITICO',
-
-    color_continuous_scale='Turbo'
-)
-
-st.plotly_chart(
-    fig_prosp,
-    use_container_width=True
-)
-
-# =========================================================
-# IA PREDICTIVA
-# =========================================================
-
-features = [
-
-    'FREQ_HISTORICA',
-    'DIV_TACTICA',
-    'GAO_PRESENTES',
-    'UNIDADES_EXPUESTAS',
-    'IET',
-    'RIESGO'
-]
-
-target = 'EVENTO_FUTURO'
-
-if all(existe(df_filtrado,c) for c in features+[target]):
-
-    st.subheader(
+    st.header(
         "Motor IA Predictiva"
     )
 
-    modelo_df = df_filtrado[
-        features+[target]
-    ].dropna()
+    features = [
 
-    if len(modelo_df) > 50:
+        'FREQ_HISTORICA',
+        'DIV_TACTICA',
+        'GAO_PRESENTES',
+        'UNIDADES_EXPUESTAS',
+        'IET',
+        'RIESGO'
+    ]
 
-        X = modelo_df[features]
-        y = modelo_df[target]
+    target = 'EVENTO_FUTURO'
 
-        X_train, X_test, y_train, y_test = train_test_split(
+    if all(existe(df_filtrado,c) for c in features+[target]):
 
-            X,
-            y,
+        modelo_df = df_filtrado[
+            features+[target]
+        ].dropna()
 
-            test_size=0.2,
+        if len(modelo_df) > 50:
 
-            random_state=42
-        )
+            X = modelo_df[features]
+            y = modelo_df[target]
 
-        modelo = XGBClassifier(
+            X_train, X_test, y_train, y_test = train_test_split(
 
-            n_estimators=100,
+                X,
+                y,
 
-            max_depth=4,
+                test_size=0.2,
 
-            learning_rate=0.1,
+                random_state=42
+            )
 
-            eval_metric='logloss'
-        )
+            modelo = XGBClassifier(
 
-        modelo.fit(
-            X_train,
-            y_train
-        )
+                n_estimators=100,
 
-        pred = modelo.predict(X_test)
+                max_depth=4,
 
-        acc = accuracy_score(
-            y_test,
-            pred
-        )
+                learning_rate=0.1,
 
-        st.metric(
-            "Precisión IA",
-            round(acc,3)
-        )
+                eval_metric='logloss'
+            )
+
+            modelo.fit(
+                X_train,
+                y_train
+            )
+
+            pred = modelo.predict(X_test)
+
+            acc = accuracy_score(
+                y_test,
+                pred
+            )
+
+            st.metric(
+                "Precisión IA",
+                round(acc,3)
+            )
 
 # =========================================================
-# CLUSTERING TERRITORIAL
+# TAB PROSPECTIVA
 # =========================================================
 
-cluster_cols = [
+with tab3:
 
-    'RIESGO',
-    'EVENTOS',
-    'IET',
-    'GAO_PRESENTES'
-]
-
-if all(existe(df_filtrado,c) for c in cluster_cols):
-
-    st.subheader(
-        "Clustering Territorial"
+    st.header(
+        "Prospectiva Estratégica"
     )
 
-    cluster_df = df_filtrado[
-        ['MUNICIPIO'] + cluster_cols
-    ].dropna()
+    prospectiva = df_filtrado.groupby(
+        'MUNICIPIO',
+        as_index=False
+    ).agg({
 
-    modelo_cluster = KMeans(
+        'EVENTOS':'sum',
+        'RIESGO':'mean',
+        'GAO_PRESENTES':'mean',
+        'UNIDADES_EXPUESTAS':'mean'
+    })
 
-        n_clusters=4,
+    prospectiva['ESCENARIO_CRITICO'] = (
 
-        random_state=42,
+        prospectiva['EVENTOS'] * 0.35 +
 
-        n_init=10
-    )
+        prospectiva['RIESGO'] * 0.35 +
 
-    cluster_df['CLUSTER'] = modelo_cluster.fit_predict(
+        prospectiva['GAO_PRESENTES'] * 0.20 +
 
-        cluster_df[cluster_cols]
-    )
+        prospectiva['UNIDADES_EXPUESTAS'] * 0.10
+    ) * 1.40
 
-    fig_cluster = px.scatter(
+    fig_prosp = px.bar(
 
-        cluster_df,
+        prospectiva.sort_values(
+            by='ESCENARIO_CRITICO',
+            ascending=False
+        ).head(20),
 
-        x='RIESGO',
+        x='MUNICIPIO',
 
-        y='EVENTOS',
+        y='ESCENARIO_CRITICO',
 
-        size='IET',
+        color='ESCENARIO_CRITICO',
 
-        color='CLUSTER',
+        color_continuous_scale='Turbo',
 
-        hover_name='MUNICIPIO'
+        height=500
     )
 
     st.plotly_chart(
-        fig_cluster,
+        fig_prosp,
         use_container_width=True
     )
 
 # =========================================================
-# GRAFOS RELACIONALES
+# TAB REDES
 # =========================================================
 
-if COL_GAO and existe(df_op,'MUNICIPIO'):
+with tab4:
 
-    st.subheader(
-        "Grafos Relacionales"
+    st.header(
+        "Redes Relacionales"
     )
 
-    G = nx.Graph()
+    if COL_GAO and existe(df_op,'MUNICIPIO'):
 
-    red = df_op[
-        [COL_GAO,'MUNICIPIO']
-    ].dropna()
+        G = nx.Graph()
 
-    for _, row in red.iterrows():
+        red = df_op[
+            [COL_GAO,'MUNICIPIO']
+        ].dropna()
 
-        G.add_edge(
-            row[COL_GAO],
-            row['MUNICIPIO']
+        for _, row in red.iterrows():
+
+            G.add_edge(
+                row[COL_GAO],
+                row['MUNICIPIO']
+            )
+
+        pos = nx.spring_layout(
+            G,
+            seed=42
         )
 
-    pos = nx.spring_layout(
-        G,
-        seed=42
+        edge_x = []
+        edge_y = []
+
+        for edge in G.edges():
+
+            x0, y0 = pos[edge[0]]
+            x1, y1 = pos[edge[1]]
+
+            edge_x.extend([x0, x1, None])
+            edge_y.extend([y0, y1, None])
+
+        edge_trace = go.Scatter(
+
+            x=edge_x,
+            y=edge_y,
+
+            line=dict(width=0.5),
+
+            hoverinfo='none',
+
+            mode='lines'
+        )
+
+        node_x = []
+        node_y = []
+        node_text = []
+
+        for node in G.nodes():
+
+            x, y = pos[node]
+
+            node_x.append(x)
+            node_y.append(y)
+            node_text.append(str(node))
+
+        node_trace = go.Scatter(
+
+            x=node_x,
+            y=node_y,
+
+            mode='markers+text',
+
+            text=node_text,
+
+            textposition="top center",
+
+            hoverinfo='text',
+
+            marker=dict(
+                size=10,
+                color='cyan'
+            )
+        )
+
+        fig_grafo = go.Figure(
+
+            data=[edge_trace, node_trace]
+        )
+
+        fig_grafo.update_layout(
+
+            showlegend=False,
+
+            height=500,
+
+            template='plotly_dark'
+        )
+
+        st.plotly_chart(
+            fig_grafo,
+            use_container_width=True
+        )
+
+# =========================================================
+# TAB ALERTAS
+# =========================================================
+
+with tab5:
+
+    st.header(
+        "Alertas Inteligentes"
     )
 
-    edge_x = []
-    edge_y = []
+    alertas = df_filtrado.groupby(
+        'MUNICIPIO',
+        as_index=False
+    ).agg({
 
-    for edge in G.edges():
+        'PRIORIDAD_ESTRATEGICA':'mean',
+        'EVENTOS':'sum',
+        'GAO_PRESENTES':'mean'
+    })
 
-        x0, y0 = pos[edge[0]]
-        x1, y1 = pos[edge[1]]
+    alertas['TIPO_ALERTA'] = np.where(
 
-        edge_x.extend([x0, x1, None])
-        edge_y.extend([y0, y1, None])
+        (
+            (alertas['PRIORIDAD_ESTRATEGICA'] >= 30) &
+            (alertas['GAO_PRESENTES'] >= 2)
+        ),
 
-    edge_trace = go.Scatter(
+        "CONVERGENCIA CRITICA",
 
-        x=edge_x,
-        y=edge_y,
+        np.where(
 
-        line=dict(width=0.5),
+            alertas['EVENTOS'] >= alertas['EVENTOS'].quantile(0.90),
 
-        hoverinfo='none',
+            "ESCALAMIENTO",
 
-        mode='lines'
-    )
-
-    node_x = []
-    node_y = []
-    node_text = []
-
-    for node in G.nodes():
-
-        x, y = pos[node]
-
-        node_x.append(x)
-        node_y.append(y)
-        node_text.append(str(node))
-
-    node_trace = go.Scatter(
-
-        x=node_x,
-        y=node_y,
-
-        mode='markers+text',
-
-        text=node_text,
-
-        textposition="top center",
-
-        hoverinfo='text',
-
-        marker=dict(
-            size=10,
-            color='cyan'
+            "VIGILANCIA"
         )
     )
 
-    fig_grafo = go.Figure(
+    st.dataframe(
 
-        data=[edge_trace, node_trace]
-    )
+        alertas.sort_values(
+            by='PRIORIDAD_ESTRATEGICA',
+            ascending=False
+        ),
 
-    fig_grafo.update_layout(
-
-        showlegend=False,
-
-        height=700,
-
-        template='plotly_dark'
-    )
-
-    st.plotly_chart(
-        fig_grafo,
         use_container_width=True
     )
 
-# =========================================================
-# ALERTAS INTELIGENTES
-# =========================================================
-
-st.subheader(
-    "Alertas Inteligentes"
-)
-
-alertas = df_filtrado.groupby(
-    'MUNICIPIO',
-    as_index=False
-).agg({
-
-    'PRIORIDAD_ESTRATEGICA':'mean',
-
-    'EVENTOS':'sum',
-
-    'GAO_PRESENTES':'mean'
-})
-
-alertas['TIPO_ALERTA'] = np.where(
-
-    (
-        (alertas['PRIORIDAD_ESTRATEGICA'] >= 30) &
-        (alertas['GAO_PRESENTES'] >= 2)
-    ),
-
-    "CONVERGENCIA CRITICA",
-
-    np.where(
-
-        alertas['EVENTOS'] >= alertas['EVENTOS'].quantile(0.90),
-
-        "ESCALAMIENTO",
-
-        "VIGILANCIA"
+    st.subheader(
+        "Narrativa Estratégica IA"
     )
-)
 
-st.dataframe(
+    top = alertas.sort_values(
 
-    alertas.sort_values(
         by='PRIORIDAD_ESTRATEGICA',
+
         ascending=False
-    ),
 
-    use_container_width=True
-)
+    ).head(5)
+
+    for _, row in top.iterrows():
+
+        narrativa = f"""
+
+        El municipio de {row['MUNICIPIO']}
+        presenta una condición operacional
+        de tipo {row['TIPO_ALERTA']}.
+
+        Se identifica incremento de presión
+        territorial y probabilidad de
+        expansión operacional.
+
+        """
+
+        st.markdown(
+            narrativa
+        )
 
 # =========================================================
-# NARRATIVA IA
+# TAB OPERACIONAL
 # =========================================================
 
-st.subheader(
-    "Narrativa Estratégica Automatizada"
-)
+with tab6:
 
-top = alertas.sort_values(
-
-    by='PRIORIDAD_ESTRATEGICA',
-
-    ascending=False
-
-).head(5)
-
-for _, row in top.iterrows():
-
-    narrativa = f"""
-
-    El municipio de {row['MUNICIPIO']}
-    presenta una condición operacional
-    de tipo {row['TIPO_ALERTA']}.
-
-    Se identifica incremento de presión
-    territorial y probabilidad de
-    expansión operacional.
-
-    La evolución prospectiva indica
-    necesidad de monitoreo prioritario.
-
-    """
-
-    st.markdown(
-        narrativa
+    st.header(
+        "Vista Operacional"
     )
 
-# =========================================================
-# TABLA FINAL
-# =========================================================
+    st.subheader(
+        "Matriz Estratégica"
+    )
 
-st.subheader(
-    "Vista Estratégica Consolidada"
-)
+    fig_matrix = px.scatter(
 
-st.dataframe(
-    df_filtrado,
-    use_container_width=True
-)
+        df_filtrado,
+
+        x='RIESGO_EVOLUTIVO',
+
+        y='PRIORIDAD_ESTRATEGICA',
+
+        size='EVENTOS',
+
+        color='PRIORIDAD_ESTRATEGICA',
+
+        hover_name='MUNICIPIO',
+
+        color_continuous_scale='Turbo',
+
+        height=500
+    )
+
+    st.plotly_chart(
+        fig_matrix,
+        use_container_width=True
+    )
+
+    if COL_GAO:
+
+        st.subheader(
+            "Capacidad Transformación GAO"
+        )
+
+        gao_stats = df_op.groupby(
+            COL_GAO,
+            as_index=False
+        ).size()
+
+        gao_stats.columns = [
+            'GAO',
+            'ACTIVIDAD_OPERACIONAL'
+        ]
+
+        gao_stats['CAPACIDAD_TRANSFORMACION'] = (
+
+            gao_stats['ACTIVIDAD_OPERACIONAL']
+            /
+            gao_stats['ACTIVIDAD_OPERACIONAL'].max()
+
+        ) * 100
+
+        fig_gao = px.bar(
+
+            gao_stats.sort_values(
+                by='CAPACIDAD_TRANSFORMACION',
+                ascending=False
+            ).head(15),
+
+            x='GAO',
+
+            y='CAPACIDAD_TRANSFORMACION',
+
+            color='CAPACIDAD_TRANSFORMACION',
+
+            color_continuous_scale='Turbo',
+
+            height=500
+        )
+
+        st.plotly_chart(
+            fig_gao,
+            use_container_width=True
+        )
+
+    st.subheader(
+        "Vista Estratégica Consolidada"
+    )
+
+    st.dataframe(
+        df_filtrado,
+        use_container_width=True
+    )
