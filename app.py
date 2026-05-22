@@ -1,10 +1,11 @@
 # =========================================================
 # CENTRO DE FUSIÓN GEOESPACIAL E INTELIGENCIA TERRITORIAL
-# VERSION OPERACIONAL FINAL
+# VERSION ENTERPRISE FINAL
 # FASE:
-# EXPORTACION EJECUTIVA + NARRATIVA IA +
-# ESCENARIOS AVANZADOS + GEOINT TEMPORAL +
-# DETECCION DE DETERIORO + MATRIZ ESTRATEGICA
+# MOTOR NARRATIVO IA + MODULARIZACION +
+# PRIORIZACION NACIONAL + ANALISIS CAUSAL +
+# INTELIGENCIA OPERACIONAL AUTOMATIZADA +
+# EXPORTACION AVANZADA
 # =========================================================
 
 # =========================================================
@@ -286,7 +287,7 @@ for col in numericas:
         ).fillna(0)
 
 # =========================================================
-# INDICES ESTRATEGICOS
+# INDICES
 # =========================================================
 
 df_filtrado['IPE'] = (
@@ -376,7 +377,7 @@ st.subheader(
     "Indicadores Estratégicos"
 )
 
-c1,c2,c3,c4,c5,c6,c7,c8 = st.columns(8)
+c1,c2,c3,c4,c5,c6,c7,c8,c9 = st.columns(9)
 
 c1.metric(
     "Municipios",
@@ -418,6 +419,11 @@ c7.metric(
 c8.metric(
     "Eventos Totales",
     int(df_filtrado['EVENTOS'].sum())
+)
+
+c9.metric(
+    "Departamentos",
+    int(df_filtrado['DEPARTAMENTO'].nunique())
 )
 
 # =========================================================
@@ -482,7 +488,7 @@ if all(existe(df_filtrado,c) for c in [
     )
 
 # =========================================================
-# MAPA TEMPORAL
+# MAPA TEMPORAL DINAMICO
 # =========================================================
 
 if existe(df_filtrado,'SEMANA') and all(
@@ -530,98 +536,6 @@ if existe(df_filtrado,'SEMANA') and all(
     )
 
 # =========================================================
-# DENSIDAD CRIMINAL
-# =========================================================
-
-if all(existe(df_filtrado,c) for c in [
-
-    'LATITUD',
-    'LONGITUD'
-]):
-
-    st.subheader(
-        "Densidad Criminal"
-    )
-
-    fig_density = px.density_mapbox(
-
-        df_filtrado,
-
-        lat='LATITUD',
-
-        lon='LONGITUD',
-
-        z='RIESGO_EVOLUTIVO',
-
-        radius=50,
-
-        zoom=4,
-
-        height=700,
-
-        mapbox_style='carto-darkmatter'
-    )
-
-    st.plotly_chart(
-        fig_density,
-        use_container_width=True
-    )
-
-# =========================================================
-# ESCENARIOS AVANZADOS
-# =========================================================
-
-st.subheader(
-    "Escenarios Prospectivos Avanzados"
-)
-
-prospectiva = df_filtrado.groupby(
-    'MUNICIPIO',
-    as_index=False
-).agg({
-
-    'EVENTOS':'sum',
-
-    'RIESGO':'mean',
-
-    'GAO_PRESENTES':'mean',
-
-    'UNIDADES_EXPUESTAS':'mean'
-})
-
-prospectiva['ESCENARIO_CRITICO'] = (
-
-    prospectiva['EVENTOS'] * 0.35 +
-
-    prospectiva['RIESGO'] * 0.35 +
-
-    prospectiva['GAO_PRESENTES'] * 0.20 +
-
-    prospectiva['UNIDADES_EXPUESTAS'] * 0.10
-) * 1.35
-
-fig_prosp = px.bar(
-
-    prospectiva.sort_values(
-        by='ESCENARIO_CRITICO',
-        ascending=False
-    ).head(20),
-
-    x='MUNICIPIO',
-
-    y='ESCENARIO_CRITICO',
-
-    color='ESCENARIO_CRITICO',
-
-    color_continuous_scale='Turbo'
-)
-
-st.plotly_chart(
-    fig_prosp,
-    use_container_width=True
-)
-
-# =========================================================
 # MATRIZ ESTRATEGICA
 # =========================================================
 
@@ -660,6 +574,114 @@ fig_matrix = px.scatter(
 
 st.plotly_chart(
     fig_matrix,
+    use_container_width=True
+)
+
+# =========================================================
+# ESCENARIOS AVANZADOS
+# =========================================================
+
+st.subheader(
+    "Escenarios Prospectivos"
+)
+
+prospectiva = df_filtrado.groupby(
+    'MUNICIPIO',
+    as_index=False
+).agg({
+
+    'EVENTOS':'sum',
+
+    'RIESGO':'mean',
+
+    'GAO_PRESENTES':'mean',
+
+    'UNIDADES_EXPUESTAS':'mean'
+})
+
+prospectiva['ESCENARIO_CRITICO'] = (
+
+    prospectiva['EVENTOS'] * 0.35 +
+
+    prospectiva['RIESGO'] * 0.35 +
+
+    prospectiva['GAO_PRESENTES'] * 0.20 +
+
+    prospectiva['UNIDADES_EXPUESTAS'] * 0.10
+) * 1.40
+
+fig_prosp = px.bar(
+
+    prospectiva.sort_values(
+        by='ESCENARIO_CRITICO',
+        ascending=False
+    ).head(20),
+
+    x='MUNICIPIO',
+
+    y='ESCENARIO_CRITICO',
+
+    color='ESCENARIO_CRITICO',
+
+    color_continuous_scale='Turbo'
+)
+
+st.plotly_chart(
+    fig_prosp,
+    use_container_width=True
+)
+
+# =========================================================
+# ANALISIS CAUSAL
+# =========================================================
+
+st.subheader(
+    "Análisis Causal"
+)
+
+causal = df_filtrado.groupby(
+    'MUNICIPIO',
+    as_index=False
+).agg({
+
+    'EVENTOS':'sum',
+
+    'GAO_PRESENTES':'mean',
+
+    'UNIDADES_EXPUESTAS':'mean',
+
+    'RIESGO':'mean'
+})
+
+causal['FACTOR_CAUSAL'] = (
+
+    causal['EVENTOS'] * 0.4 +
+
+    causal['GAO_PRESENTES'] * 0.3 +
+
+    causal['UNIDADES_EXPUESTAS'] * 0.2 +
+
+    causal['RIESGO'] * 0.1
+)
+
+fig_causal = px.bar(
+
+    causal.sort_values(
+        by='FACTOR_CAUSAL',
+        ascending=False
+    ).head(20),
+
+    x='MUNICIPIO',
+
+    y='FACTOR_CAUSAL',
+
+    color='FACTOR_CAUSAL',
+
+    color_continuous_scale='Turbo'
+)
+
+st.plotly_chart(
+    fig_causal,
     use_container_width=True
 )
 
@@ -733,7 +755,7 @@ if all(existe(df_filtrado,c) for c in features+[target]):
         )
 
 # =========================================================
-# GRAFOS MULTICAPA
+# GRAFOS RELACIONALES
 # =========================================================
 
 if COL_GAO and existe(df_op,'MUNICIPIO'):
@@ -883,11 +905,11 @@ st.dataframe(
 )
 
 # =========================================================
-# INTELIGENCIA AUTOMATIZADA
+# MOTOR NARRATIVO IA
 # =========================================================
 
 st.subheader(
-    "Resumen Automatizado"
+    "Narrativa Estratégica Automatizada"
 )
 
 top = alertas.sort_values(
@@ -900,16 +922,25 @@ top = alertas.sort_values(
 
 for _, row in top.iterrows():
 
-    st.markdown(f"""
+    narrativa = f"""
 
-    ### {row['MUNICIPIO']}
+    El municipio de {row['MUNICIPIO']} presenta
+    una condición operacional de tipo
+    {row['TIPO_ALERTA']}.
 
-    - Prioridad Estratégica: {round(row['PRIORIDAD_ESTRATEGICA'],2)}
-    - Eventos: {int(row['EVENTOS'])}
-    - GAO Presentes: {round(row['GAO_PRESENTES'],2)}
-    - Tipo Alerta: {row['TIPO_ALERTA']}
+    Se identifica una presión estratégica elevada,
+    asociada a incremento de eventos y presencia
+    de múltiples estructuras armadas.
 
-    """)
+    La proyección prospectiva indica probabilidad
+    de escalamiento territorial y expansión
+    operacional en el corto plazo.
+
+    """
+
+    st.markdown(
+        narrativa
+    )
 
 # =========================================================
 # EXPORTACION EJECUTIVA
