@@ -1,10 +1,10 @@
 # =========================================================
 # CENTRO DE FUSIÓN GEOESPACIAL E INTELIGENCIA TERRITORIAL
-# VERSION ESTRATEGICA FINAL AVANZADA
+# VERSION OPERACIONAL FINAL
 # FASE:
-# ESCENARIOS DINAMICOS + MAPAS TEMPORALES +
-# INTELIGENCIA AUTOMATIZADA + GRAFOS AVANZADOS +
-# PRESION EVOLUTIVA + PRIORIZACION ESTRATEGICA
+# EXPORTACION EJECUTIVA + NARRATIVA IA +
+# ESCENARIOS AVANZADOS + GEOINT TEMPORAL +
+# DETECCION DE DETERIORO + MATRIZ ESTRATEGICA
 # =========================================================
 
 # =========================================================
@@ -27,6 +27,8 @@ from sklearn.cluster import KMeans
 from xgboost import XGBClassifier
 
 import networkx as nx
+
+from io import BytesIO
 
 # =========================================================
 # CONFIG
@@ -284,7 +286,7 @@ for col in numericas:
         ).fillna(0)
 
 # =========================================================
-# INDICES
+# INDICES ESTRATEGICOS
 # =========================================================
 
 df_filtrado['IPE'] = (
@@ -326,10 +328,6 @@ df_filtrado['RIESGO_EVOLUTIVO'] = (
 
     df_filtrado['GAO_PRESENTES'] * 0.20
 )
-
-# =========================================================
-# PRIORIZACION ESTRATEGICA
-# =========================================================
 
 df_filtrado['PRIORIDAD_ESTRATEGICA'] = (
 
@@ -499,11 +497,9 @@ if existe(df_filtrado,'SEMANA') and all(
         "Mapa Temporal Dinámico"
     )
 
-    temporal = df_filtrado.copy()
-
     fig_time = px.scatter_mapbox(
 
-        temporal,
+        df_filtrado,
 
         lat='LATITUD',
 
@@ -572,65 +568,15 @@ if all(existe(df_filtrado,c) for c in [
     )
 
 # =========================================================
-# ESCENARIOS PROSPECTIVOS
+# ESCENARIOS AVANZADOS
 # =========================================================
 
 st.subheader(
-    "Escenarios Prospectivos"
+    "Escenarios Prospectivos Avanzados"
 )
 
 prospectiva = df_filtrado.groupby(
     'MUNICIPIO',
-    as_index=False
-).agg({
-
-    'EVENTOS':'sum',
-
-    'RIESGO':'mean',
-
-    'GAO_PRESENTES':'mean'
-})
-
-prospectiva['ESCENARIO_FUTURO'] = (
-
-    prospectiva['EVENTOS'] * 0.4 +
-
-    prospectiva['RIESGO'] * 0.4 +
-
-    prospectiva['GAO_PRESENTES'] * 0.2
-) * 1.25
-
-fig_prosp = px.bar(
-
-    prospectiva.sort_values(
-        by='ESCENARIO_FUTURO',
-        ascending=False
-    ).head(20),
-
-    x='MUNICIPIO',
-
-    y='ESCENARIO_FUTURO',
-
-    color='ESCENARIO_FUTURO',
-
-    color_continuous_scale='Turbo'
-)
-
-st.plotly_chart(
-    fig_prosp,
-    use_container_width=True
-)
-
-# =========================================================
-# PRESION SISTEMICA
-# =========================================================
-
-st.subheader(
-    "Presión Sistémica"
-)
-
-presion = df_filtrado.groupby(
-    'DEPARTAMENTO',
     as_index=False
 ).agg({
 
@@ -643,35 +589,77 @@ presion = df_filtrado.groupby(
     'UNIDADES_EXPUESTAS':'mean'
 })
 
-presion['PRESION_SISTEMICA'] = (
+prospectiva['ESCENARIO_CRITICO'] = (
 
-    presion['EVENTOS'] * 0.35 +
+    prospectiva['EVENTOS'] * 0.35 +
 
-    presion['RIESGO'] * 0.30 +
+    prospectiva['RIESGO'] * 0.35 +
 
-    presion['GAO_PRESENTES'] * 0.20 +
+    prospectiva['GAO_PRESENTES'] * 0.20 +
 
-    presion['UNIDADES_EXPUESTAS'] * 0.15
-)
+    prospectiva['UNIDADES_EXPUESTAS'] * 0.10
+) * 1.35
 
-fig_presion = px.bar(
+fig_prosp = px.bar(
 
-    presion.sort_values(
-        by='PRESION_SISTEMICA',
+    prospectiva.sort_values(
+        by='ESCENARIO_CRITICO',
         ascending=False
-    ),
+    ).head(20),
 
-    x='DEPARTAMENTO',
+    x='MUNICIPIO',
 
-    y='PRESION_SISTEMICA',
+    y='ESCENARIO_CRITICO',
 
-    color='PRESION_SISTEMICA',
+    color='ESCENARIO_CRITICO',
 
     color_continuous_scale='Turbo'
 )
 
 st.plotly_chart(
-    fig_presion,
+    fig_prosp,
+    use_container_width=True
+)
+
+# =========================================================
+# MATRIZ ESTRATEGICA
+# =========================================================
+
+st.subheader(
+    "Matriz Estratégica"
+)
+
+matriz = df_filtrado.groupby(
+    'MUNICIPIO',
+    as_index=False
+).agg({
+
+    'PRIORIDAD_ESTRATEGICA':'mean',
+
+    'RIESGO_EVOLUTIVO':'mean',
+
+    'EVENTOS':'sum'
+})
+
+fig_matrix = px.scatter(
+
+    matriz,
+
+    x='RIESGO_EVOLUTIVO',
+
+    y='PRIORIDAD_ESTRATEGICA',
+
+    size='EVENTOS',
+
+    color='PRIORIDAD_ESTRATEGICA',
+
+    hover_name='MUNICIPIO',
+
+    color_continuous_scale='Turbo'
+)
+
+st.plotly_chart(
+    fig_matrix,
     use_container_width=True
 )
 
@@ -745,67 +733,13 @@ if all(existe(df_filtrado,c) for c in features+[target]):
         )
 
 # =========================================================
-# REDES MULTICAPA
+# GRAFOS MULTICAPA
 # =========================================================
 
 if COL_GAO and existe(df_op,'MUNICIPIO'):
 
     st.subheader(
-        "Redes Multicapa"
-    )
-
-    G = nx.Graph()
-
-    red = df_op[
-        [COL_GAO,'MUNICIPIO']
-    ].dropna()
-
-    for _, row in red.iterrows():
-
-        G.add_edge(
-
-            row[COL_GAO],
-            row['MUNICIPIO']
-        )
-
-    centralidad = nx.degree_centrality(G)
-
-    red_df = pd.DataFrame({
-
-        'NODO': list(centralidad.keys()),
-
-        'CENTRALIDAD': list(centralidad.values())
-    })
-
-    fig_red = px.bar(
-
-        red_df.sort_values(
-            by='CENTRALIDAD',
-            ascending=False
-        ).head(20),
-
-        x='NODO',
-
-        y='CENTRALIDAD',
-
-        color='CENTRALIDAD',
-
-        color_continuous_scale='Turbo'
-    )
-
-    st.plotly_chart(
-        fig_red,
-        use_container_width=True
-    )
-
-# =========================================================
-# GRAFO INTERACTIVO
-# =========================================================
-
-if COL_GAO and existe(df_op,'MUNICIPIO'):
-
-    st.subheader(
-        "Grafo Relacional"
+        "Grafos Relacionales"
     )
 
     G = nx.Graph()
@@ -900,56 +834,6 @@ if COL_GAO and existe(df_op,'MUNICIPIO'):
     )
 
 # =========================================================
-# NODOS CRITICOS
-# =========================================================
-
-st.subheader(
-    "Nodos Críticos"
-)
-
-nodos = df_filtrado.groupby(
-    'MUNICIPIO',
-    as_index=False
-).agg({
-
-    'EVENTOS':'sum',
-
-    'RIESGO':'mean',
-
-    'GAO_PRESENTES':'mean'
-})
-
-nodos['NODO_SCORE'] = (
-
-    nodos['EVENTOS'] * 0.5 +
-
-    nodos['RIESGO'] * 0.3 +
-
-    nodos['GAO_PRESENTES'] * 0.2
-)
-
-fig_nodos = px.bar(
-
-    nodos.sort_values(
-        by='NODO_SCORE',
-        ascending=False
-    ).head(20),
-
-    x='MUNICIPIO',
-
-    y='NODO_SCORE',
-
-    color='NODO_SCORE',
-
-    color_continuous_scale='Turbo'
-)
-
-st.plotly_chart(
-    fig_nodos,
-    use_container_width=True
-)
-
-# =========================================================
 # ALERTAS INTELIGENTES
 # =========================================================
 
@@ -1026,6 +910,41 @@ for _, row in top.iterrows():
     - Tipo Alerta: {row['TIPO_ALERTA']}
 
     """)
+
+# =========================================================
+# EXPORTACION EJECUTIVA
+# =========================================================
+
+st.subheader(
+    "Exportación Ejecutiva"
+)
+
+excel_buffer = BytesIO()
+
+with pd.ExcelWriter(
+    excel_buffer,
+    engine='xlsxwriter'
+) as writer:
+
+    df_filtrado.to_excel(
+
+        writer,
+
+        index=False,
+
+        sheet_name='Fusion_Territorial'
+    )
+
+st.download_button(
+
+    label="Descargar Reporte Estratégico Excel",
+
+    data=excel_buffer.getvalue(),
+
+    file_name="Reporte_Fusion_Territorial.xlsx",
+
+    mime="application/vnd.ms-excel"
+)
 
 # =========================================================
 # TABLA FINAL
