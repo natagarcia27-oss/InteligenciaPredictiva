@@ -1,8 +1,8 @@
 # =========================================================
 # CENTRO DE FUSIÓN GEOESPACIAL E INTELIGENCIA TERRITORIAL
-# VERSION AGIL OPERACIONAL
-# FASE ACTUAL:
-# REDES + CENTRALIDAD + ALERTAS + CONTAGIO
+# VERSION AVANZADA
+# FASE:
+# EXPANSION + PROPAGACION + REDES + ALERTAS AVANZADAS
 # =========================================================
 
 # =========================================================
@@ -32,7 +32,7 @@ import networkx as nx
 
 st.set_page_config(
 
-    page_title="Centro Fusion Territorial",
+    page_title="Fusion Territorial",
 
     layout="wide"
 )
@@ -94,17 +94,14 @@ def leer_csv_seguro(ruta):
 
     return pd.DataFrame()
 
-# =========================================================
-# LIMPIAR COLUMNAS
-# =========================================================
-
 def limpiar_columnas(df):
 
     nuevas = []
 
     for col in df.columns:
 
-        col = (
+        nuevas.append(
+
             str(col)
             .strip()
             .upper()
@@ -112,15 +109,9 @@ def limpiar_columnas(df):
             .replace("-", "_")
         )
 
-        nuevas.append(col)
-
     df.columns = nuevas
 
     return df
-
-# =========================================================
-# VALIDACION
-# =========================================================
 
 def existe(df_temp, col):
 
@@ -137,26 +128,28 @@ def detectar_columna(lista, dataframe):
     return None
 
 # =========================================================
-# CARGAR BASES
+# CARGA
 # =========================================================
 
 @st.cache_data
 def cargar_predictiva():
 
-    df = leer_csv_seguro(
-        "riesgo_municipal.csv"
-    )
+    return limpiar_columnas(
 
-    return limpiar_columnas(df)
+        leer_csv_seguro(
+            "riesgo_municipal.csv"
+        )
+    )
 
 @st.cache_data
 def cargar_operacional():
 
-    df = leer_csv_seguro(
-        "eventos_operacionales.csv"
-    )
+    return limpiar_columnas(
 
-    return limpiar_columnas(df)
+        leer_csv_seguro(
+            "eventos_operacionales.csv"
+        )
+    )
 
 df = cargar_predictiva()
 df_op = cargar_operacional()
@@ -292,8 +285,10 @@ for col in numericas:
     if existe(df_filtrado, col):
 
         df_filtrado[col] = pd.to_numeric(
+
             df_filtrado[col],
             errors='coerce'
+
         ).fillna(0)
 
 # =========================================================
@@ -369,7 +364,7 @@ st.subheader(
     "Indicadores Estratégicos"
 )
 
-c1,c2,c3,c4,c5 = st.columns(5)
+c1,c2,c3,c4,c5,c6 = st.columns(6)
 
 c1.metric(
     "Municipios",
@@ -394,6 +389,11 @@ c4.metric(
 c5.metric(
     "IGE",
     round(df_filtrado['IGE'].mean(),2)
+)
+
+c6.metric(
+    "GAO",
+    round(df_filtrado['GAO_PRESENTES'].mean(),2)
 )
 
 # =========================================================
@@ -468,7 +468,7 @@ if all(existe(df_filtrado,c) for c in [
 ]):
 
     st.subheader(
-        "Mapa Calor Operacional"
+        "Mapa Calor Territorial"
     )
 
     fig_heat = px.density_mapbox(
@@ -526,6 +526,56 @@ fig_prioridad = px.bar(
 
 st.plotly_chart(
     fig_prioridad,
+    use_container_width=True
+)
+
+# =========================================================
+# PROPAGACION TERRITORIAL
+# =========================================================
+
+st.subheader(
+    "Propagación Territorial"
+)
+
+prop = df_filtrado.groupby(
+    'DEPARTAMENTO',
+    as_index=False
+).agg({
+
+    'EVENTOS':'sum',
+
+    'RIESGO':'mean',
+
+    'GAO_PRESENTES':'mean'
+})
+
+prop['PRESION_REGIONAL'] = (
+
+    prop['EVENTOS'] * 0.5 +
+
+    prop['RIESGO'] * 0.3 +
+
+    prop['GAO_PRESENTES'] * 0.2
+)
+
+fig_prop = px.bar(
+
+    prop.sort_values(
+        by='PRESION_REGIONAL',
+        ascending=False
+    ),
+
+    x='DEPARTAMENTO',
+
+    y='PRESION_REGIONAL',
+
+    color='PRESION_REGIONAL',
+
+    color_continuous_scale='Turbo'
+)
+
+st.plotly_chart(
+    fig_prop,
     use_container_width=True
 )
 
@@ -621,10 +671,6 @@ if all(existe(df_filtrado,c) for c in anom_cols):
         ['MUNICIPIO'] + anom_cols
     ].dropna()
 
-    X_anom = anom_df[
-        anom_cols
-    ]
-
     detector = IsolationForest(
 
         contamination=0.05,
@@ -632,10 +678,13 @@ if all(existe(df_filtrado,c) for c in anom_cols):
         random_state=42
     )
 
-    detector.fit(X_anom)
+    detector.fit(
+        anom_df[anom_cols]
+    )
 
     anom_df['ANOMALIA'] = detector.predict(
-        X_anom
+
+        anom_df[anom_cols]
     )
 
     anomalos = anom_df[
@@ -721,13 +770,13 @@ if all(existe(df_filtrado,c) for c in cluster_cols):
     )
 
 # =========================================================
-# CAPACIDAD INNOVACION Y TRANSFORMACION
+# INNOVACION Y TRANSFORMACION GAO
 # =========================================================
 
 if COL_GAO and COL_ACTIVIDAD:
 
     st.subheader(
-        "Capacidad de Innovación y Transformación GAO"
+        "Capacidad Innovación y Transformación GAO"
     )
 
     org = df_op.groupby(
@@ -797,13 +846,14 @@ if COL_GAO and existe(df_op,'MUNICIPIO'):
     for _, row in red.iterrows():
 
         G.add_edge(
+
             row[COL_GAO],
             row['MUNICIPIO']
         )
 
     centralidad = nx.degree_centrality(G)
 
-    centralidad_df = pd.DataFrame({
+    cent_df = pd.DataFrame({
 
         'NODO': list(centralidad.keys()),
 
@@ -812,7 +862,7 @@ if COL_GAO and existe(df_op,'MUNICIPIO'):
 
     fig_cent = px.bar(
 
-        centralidad_df.sort_values(
+        cent_df.sort_values(
             by='CENTRALIDAD',
             ascending=False
         ).head(20),
@@ -841,11 +891,11 @@ if COL_GAO and existe(df_op,'MUNICIPIO'):
         "Convergencia Criminal"
     )
 
-    convergencia = df_op.groupby(
+    conv = df_op.groupby(
         'MUNICIPIO'
     )[COL_GAO].nunique().reset_index()
 
-    convergencia.columns = [
+    conv.columns = [
 
         'MUNICIPIO',
         'GAO_CONVERGENTES'
@@ -853,7 +903,7 @@ if COL_GAO and existe(df_op,'MUNICIPIO'):
 
     fig_conv = px.bar(
 
-        convergencia.sort_values(
+        conv.sort_values(
             by='GAO_CONVERGENTES',
             ascending=False
         ).head(20),
@@ -871,52 +921,6 @@ if COL_GAO and existe(df_op,'MUNICIPIO'):
         fig_conv,
         use_container_width=True
     )
-
-# =========================================================
-# CONTAGIO TERRITORIAL
-# =========================================================
-
-st.subheader(
-    "Contagio Territorial"
-)
-
-contagio = df_filtrado.groupby(
-    'DEPARTAMENTO',
-    as_index=False
-).agg({
-
-    'EVENTOS':'sum',
-
-    'RIESGO':'mean'
-})
-
-contagio['INDICE_CONTAGIO'] = (
-
-    contagio['EVENTOS'] * 0.6 +
-
-    contagio['RIESGO'] * 0.4
-)
-
-fig_cont = px.bar(
-
-    contagio.sort_values(
-        by='INDICE_CONTAGIO',
-        ascending=False
-    ),
-
-    x='DEPARTAMENTO',
-
-    y='INDICE_CONTAGIO',
-
-    color='INDICE_CONTAGIO',
-
-    color_continuous_scale='Turbo'
-)
-
-st.plotly_chart(
-    fig_cont,
-    use_container_width=True
-)
 
 # =========================================================
 # HUBS OPERACIONALES
@@ -965,21 +969,43 @@ st.plotly_chart(
 )
 
 # =========================================================
-# ALERTAS
+# ALERTAS AVANZADAS
 # =========================================================
 
 st.subheader(
-    "Alertas Estratégicas"
+    "Alertas Avanzadas"
 )
 
 alertas = df_filtrado.groupby(
     'MUNICIPIO',
     as_index=False
-)['IGE'].mean()
+).agg({
 
-alertas['ALERTA'] = alertas[
-    'IGE'
-].apply(alerta)
+    'IGE':'mean',
+
+    'EVENTOS':'sum',
+
+    'GAO_PRESENTES':'mean'
+})
+
+alertas['TIPO_ALERTA'] = np.where(
+
+    (
+        (alertas['IGE'] >= 20) &
+        (alertas['GAO_PRESENTES'] >= 2)
+    ),
+
+    "CONVERGENCIA CRITICA",
+
+    np.where(
+
+        alertas['EVENTOS'] >= alertas['EVENTOS'].quantile(0.90),
+
+        "ESCALAMIENTO",
+
+        "VIGILANCIA"
+    )
+)
 
 st.dataframe(
 
