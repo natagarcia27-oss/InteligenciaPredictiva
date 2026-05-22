@@ -1,10 +1,10 @@
 # =========================================================
 # CENTRO DE FUSIÓN GEOESPACIAL E INTELIGENCIA TERRITORIAL
-# VERSION ESTRATEGICA AVANZADA
+# VERSION FUSION OPERACIONAL AVANZADA
 # FASE:
-# SIMULACION PROSPECTIVA + DENSIDAD OPERACIONAL +
-# ALERTAS DINAMICAS + CORREDORES EVOLUTIVOS +
-# RIESGO ACUMULADO + PRESION MULTICAPA
+# PROSPECTIVA + PRESION SISTEMICA +
+# RIESGO EVOLUTIVO + ALERTAS INTELIGENTES +
+# REDES MULTICAPA + DENSIDAD CRIMINAL
 # =========================================================
 
 # =========================================================
@@ -319,25 +319,38 @@ df_filtrado['IGE'] = (
 )
 
 # =========================================================
+# RIESGO EVOLUTIVO
+# =========================================================
+
+df_filtrado['RIESGO_EVOLUTIVO'] = (
+
+    df_filtrado['IGE'] * 0.50 +
+
+    df_filtrado['EVENTOS'] * 0.30 +
+
+    df_filtrado['GAO_PRESENTES'] * 0.20
+)
+
+# =========================================================
 # ALERTAS
 # =========================================================
 
 def alerta(v):
 
-    if v >= 30:
+    if v >= 35:
         return "CRITICO"
 
-    elif v >= 20:
+    elif v >= 25:
         return "ALTO"
 
-    elif v >= 10:
+    elif v >= 15:
         return "MEDIO"
 
     else:
         return "BAJO"
 
 df_filtrado['ALERTA'] = df_filtrado[
-    'IGE'
+    'RIESGO_EVOLUTIVO'
 ].apply(alerta)
 
 # =========================================================
@@ -384,8 +397,8 @@ c5.metric(
 )
 
 c6.metric(
-    "GAO",
-    round(df_filtrado['GAO_PRESENTES'].mean(),2)
+    "Riesgo Evolutivo",
+    round(df_filtrado['RIESGO_EVOLUTIVO'].mean(),2)
 )
 
 c7.metric(
@@ -396,8 +409,8 @@ c7.metric(
 )
 
 c8.metric(
-    "Riesgo Acumulado",
-    round(df_filtrado['IGE'].sum(),2)
+    "GAO Promedio",
+    round(df_filtrado['GAO_PRESENTES'].mean(),2)
 )
 
 # =========================================================
@@ -426,7 +439,7 @@ if all(existe(df_filtrado,c) for c in [
 
     ).agg({
 
-        'IGE':'mean',
+        'RIESGO_EVOLUTIVO':'mean',
 
         'EVENTOS':'sum'
     })
@@ -441,7 +454,7 @@ if all(existe(df_filtrado,c) for c in [
 
         size='EVENTOS',
 
-        color='IGE',
+        color='RIESGO_EVOLUTIVO',
 
         hover_name='MUNICIPIO',
 
@@ -462,7 +475,7 @@ if all(existe(df_filtrado,c) for c in [
     )
 
 # =========================================================
-# MAPA DENSIDAD OPERACIONAL
+# DENSIDAD CRIMINAL
 # =========================================================
 
 if all(existe(df_filtrado,c) for c in [
@@ -472,7 +485,7 @@ if all(existe(df_filtrado,c) for c in [
 ]):
 
     st.subheader(
-        "Densidad Operacional"
+        "Densidad Criminal"
     )
 
     fig_density = px.density_mapbox(
@@ -483,9 +496,9 @@ if all(existe(df_filtrado,c) for c in [
 
         lon='LONGITUD',
 
-        z='EVENTOS',
+        z='RIESGO_EVOLUTIVO',
 
-        radius=40,
+        radius=45,
 
         zoom=4,
 
@@ -496,42 +509,6 @@ if all(existe(df_filtrado,c) for c in [
 
     st.plotly_chart(
         fig_density,
-        use_container_width=True
-    )
-
-# =========================================================
-# EXPANSION TEMPORAL
-# =========================================================
-
-if existe(df_filtrado,'SEMANA'):
-
-    st.subheader(
-        "Expansión Temporal"
-    )
-
-    exp = df_filtrado.groupby(
-        'SEMANA',
-        as_index=False
-    ).agg({
-
-        'EVENTOS':'sum',
-
-        'RIESGO':'mean'
-    })
-
-    fig_exp = px.line(
-
-        exp,
-
-        x='SEMANA',
-
-        y='EVENTOS',
-
-        markers=True
-    )
-
-    st.plotly_chart(
-        fig_exp,
         use_container_width=True
     )
 
@@ -562,7 +539,7 @@ prospectiva['RIESGO_FUTURO'] = (
     prospectiva['RIESGO'] * 0.4 +
 
     prospectiva['GAO_PRESENTES'] * 0.2
-) * 1.15
+) * 1.20
 
 fig_prosp = px.bar(
 
@@ -586,11 +563,11 @@ st.plotly_chart(
 )
 
 # =========================================================
-# PRESION MULTICAPA
+# PRESION SISTEMICA
 # =========================================================
 
 st.subheader(
-    "Presión Multicapa Regional"
+    "Presión Sistémica Regional"
 )
 
 presion = df_filtrado.groupby(
@@ -607,29 +584,29 @@ presion = df_filtrado.groupby(
     'UNIDADES_EXPUESTAS':'mean'
 })
 
-presion['PRESION_MULTICAPA'] = (
+presion['PRESION_SISTEMICA'] = (
 
-    presion['EVENTOS'] * 0.4 +
+    presion['EVENTOS'] * 0.35 +
 
-    presion['RIESGO'] * 0.3 +
+    presion['RIESGO'] * 0.30 +
 
-    presion['GAO_PRESENTES'] * 0.2 +
+    presion['GAO_PRESENTES'] * 0.20 +
 
-    presion['UNIDADES_EXPUESTAS'] * 0.1
+    presion['UNIDADES_EXPUESTAS'] * 0.15
 )
 
 fig_presion = px.bar(
 
     presion.sort_values(
-        by='PRESION_MULTICAPA',
+        by='PRESION_SISTEMICA',
         ascending=False
     ),
 
     x='DEPARTAMENTO',
 
-    y='PRESION_MULTICAPA',
+    y='PRESION_SISTEMICA',
 
-    color='PRESION_MULTICAPA',
+    color='PRESION_SISTEMICA',
 
     color_continuous_scale='Turbo'
 )
@@ -765,13 +742,13 @@ if all(existe(df_filtrado,c) for c in cluster_cols):
     )
 
 # =========================================================
-# CENTRALIDAD OPERACIONAL
+# REDES MULTICAPA
 # =========================================================
 
 if COL_GAO and existe(df_op,'MUNICIPIO'):
 
     st.subheader(
-        "Centralidad Operacional"
+        "Redes Multicapa"
     )
 
     G = nx.Graph()
@@ -790,16 +767,16 @@ if COL_GAO and existe(df_op,'MUNICIPIO'):
 
     centralidad = nx.degree_centrality(G)
 
-    cent_df = pd.DataFrame({
+    red_df = pd.DataFrame({
 
         'NODO': list(centralidad.keys()),
 
         'CENTRALIDAD': list(centralidad.values())
     })
 
-    fig_cent = px.bar(
+    fig_red = px.bar(
 
-        cent_df.sort_values(
+        red_df.sort_values(
             by='CENTRALIDAD',
             ascending=False
         ).head(20),
@@ -814,7 +791,7 @@ if COL_GAO and existe(df_op,'MUNICIPIO'):
     )
 
     st.plotly_chart(
-        fig_cent,
+        fig_red,
         use_container_width=True
     )
 
@@ -876,7 +853,7 @@ if COL_GAO and existe(df_op,'DEPARTAMENTO'):
     )
 
 # =========================================================
-# DETECCION NODOS CRITICOS
+# NODOS CRITICOS
 # =========================================================
 
 st.subheader(
@@ -926,11 +903,11 @@ st.plotly_chart(
 )
 
 # =========================================================
-# ALERTAS DINAMICAS
+# ALERTAS INTELIGENTES
 # =========================================================
 
 st.subheader(
-    "Alertas Dinámicas"
+    "Alertas Inteligentes"
 )
 
 alertas = df_filtrado.groupby(
@@ -938,7 +915,7 @@ alertas = df_filtrado.groupby(
     as_index=False
 ).agg({
 
-    'IGE':'mean',
+    'RIESGO_EVOLUTIVO':'mean',
 
     'EVENTOS':'sum',
 
@@ -948,7 +925,7 @@ alertas = df_filtrado.groupby(
 alertas['TIPO_ALERTA'] = np.where(
 
     (
-        (alertas['IGE'] >= 20) &
+        (alertas['RIESGO_EVOLUTIVO'] >= 25) &
         (alertas['GAO_PRESENTES'] >= 2)
     ),
 
@@ -967,7 +944,7 @@ alertas['TIPO_ALERTA'] = np.where(
 st.dataframe(
 
     alertas.sort_values(
-        by='IGE',
+        by='RIESGO_EVOLUTIVO',
         ascending=False
     ),
 
