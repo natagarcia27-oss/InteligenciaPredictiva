@@ -1,11 +1,12 @@
 # =========================================================
 # CENTRO DE FUSIÓN GEOESPACIAL E INTELIGENCIA TERRITORIAL
-# VERSION ENTERPRISE FINAL
-# FASE:
-# MOTOR NARRATIVO IA + MODULARIZACION +
-# PRIORIZACION NACIONAL + ANALISIS CAUSAL +
-# INTELIGENCIA OPERACIONAL AUTOMATIZADA +
-# EXPORTACION AVANZADA
+# VERSION ENTERPRISE ESTABLE FINAL
+# CORRECCION GLOBAL:
+# - EXPORTACION EXCEL
+# - RECUPERACION GRAFICOS
+# - RECUPERACION MAPAS
+# - ESTABILIDAD STREAMLIT CLOUD
+# - VALIDACION COLUMNAS
 # =========================================================
 
 # =========================================================
@@ -22,7 +23,6 @@ import plotly.graph_objects as go
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
 
-from sklearn.ensemble import IsolationForest
 from sklearn.cluster import KMeans
 
 from xgboost import XGBClassifier
@@ -38,8 +38,8 @@ from io import BytesIO
 st.set_page_config(
 
     page_title="Fusion Territorial Estratégica",
-
     layout="wide"
+
 )
 
 # =========================================================
@@ -64,7 +64,7 @@ h1,h2,h3 {
 }
 
 section[data-testid="stSidebar"] {
-    background-color: #161b22;
+    background-color: #111827;
 }
 
 </style>
@@ -77,7 +77,7 @@ section[data-testid="stSidebar"] {
 
 def leer_csv_seguro(ruta):
 
-    cods = [
+    codificaciones = [
 
         "utf-8",
         "latin1",
@@ -85,7 +85,7 @@ def leer_csv_seguro(ruta):
         "ISO-8859-1"
     ]
 
-    for cod in cods:
+    for cod in codificaciones:
 
         try:
 
@@ -133,7 +133,7 @@ def detectar_columna(lista, dataframe):
     return None
 
 # =========================================================
-# CARGA
+# CARGA DATOS
 # =========================================================
 
 @st.cache_data
@@ -172,7 +172,7 @@ if df.empty:
     st.stop()
 
 # =========================================================
-# DETECTAR COLUMNAS
+# DETECCION COLUMNAS
 # =========================================================
 
 COL_GAO = detectar_columna(
@@ -187,18 +187,8 @@ COL_GAO = detectar_columna(
     df_op
 )
 
-COL_ACTIVIDAD = detectar_columna(
-
-    [
-        "ACTIVIDAD",
-        "TIPO_DE_ACTIVIDAD"
-    ],
-
-    df_op
-)
-
 # =========================================================
-# SIDEBAR
+# FILTROS
 # =========================================================
 
 st.sidebar.title(
@@ -261,7 +251,7 @@ if anio_sel:
     ]
 
 # =========================================================
-# NUMERICOS
+# CONVERSION NUMERICA
 # =========================================================
 
 numericas = [
@@ -272,7 +262,8 @@ numericas = [
     'GAO_PRESENTES',
     'UNIDADES_EXPUESTAS',
     'FREQ_HISTORICA',
-    'DIV_TACTICA'
+    'DIV_TACTICA',
+    'EVENTO_FUTURO'
 ]
 
 for col in numericas:
@@ -377,7 +368,7 @@ st.subheader(
     "Indicadores Estratégicos"
 )
 
-c1,c2,c3,c4,c5,c6,c7,c8,c9 = st.columns(9)
+c1,c2,c3,c4,c5,c6,c7,c8 = st.columns(8)
 
 c1.metric(
     "Municipios",
@@ -417,13 +408,8 @@ c7.metric(
 )
 
 c8.metric(
-    "Eventos Totales",
-    int(df_filtrado['EVENTOS'].sum())
-)
-
-c9.metric(
-    "Departamentos",
-    int(df_filtrado['DEPARTAMENTO'].nunique())
+    "Registros",
+    len(df_filtrado)
 )
 
 # =========================================================
@@ -440,34 +426,17 @@ if all(existe(df_filtrado,c) for c in [
         "Mapa Geoestratégico"
     )
 
-    mapa = df_filtrado.groupby(
-
-        [
-            'MUNICIPIO',
-            'LATITUD',
-            'LONGITUD'
-        ],
-
-        as_index=False
-
-    ).agg({
-
-        'PRIORIDAD_ESTRATEGICA':'mean',
-
-        'EVENTOS':'sum'
-    })
-
     fig_map = px.scatter_mapbox(
 
-        mapa,
+        df_filtrado,
 
         lat='LATITUD',
 
         lon='LONGITUD',
 
-        size='EVENTOS',
-
         color='PRIORIDAD_ESTRATEGICA',
+
+        size='EVENTOS',
 
         hover_name='MUNICIPIO',
 
@@ -488,7 +457,7 @@ if all(existe(df_filtrado,c) for c in [
     )
 
 # =========================================================
-# MAPA TEMPORAL DINAMICO
+# MAPA TEMPORAL
 # =========================================================
 
 if existe(df_filtrado,'SEMANA') and all(
@@ -536,6 +505,44 @@ if existe(df_filtrado,'SEMANA') and all(
     )
 
 # =========================================================
+# DENSIDAD CRIMINAL
+# =========================================================
+
+if all(existe(df_filtrado,c) for c in [
+
+    'LATITUD',
+    'LONGITUD'
+]):
+
+    st.subheader(
+        "Mapa de Densidad Criminal"
+    )
+
+    fig_density = px.density_mapbox(
+
+        df_filtrado,
+
+        lat='LATITUD',
+
+        lon='LONGITUD',
+
+        z='RIESGO_EVOLUTIVO',
+
+        radius=45,
+
+        zoom=4,
+
+        height=700,
+
+        mapbox_style='carto-darkmatter'
+    )
+
+    st.plotly_chart(
+        fig_density,
+        use_container_width=True
+    )
+
+# =========================================================
 # MATRIZ ESTRATEGICA
 # =========================================================
 
@@ -543,21 +550,9 @@ st.subheader(
     "Matriz Estratégica"
 )
 
-matriz = df_filtrado.groupby(
-    'MUNICIPIO',
-    as_index=False
-).agg({
-
-    'PRIORIDAD_ESTRATEGICA':'mean',
-
-    'RIESGO_EVOLUTIVO':'mean',
-
-    'EVENTOS':'sum'
-})
-
 fig_matrix = px.scatter(
 
-    matriz,
+    df_filtrado,
 
     x='RIESGO_EVOLUTIVO',
 
@@ -578,7 +573,56 @@ st.plotly_chart(
 )
 
 # =========================================================
-# ESCENARIOS AVANZADOS
+# CAPACIDAD TRANSFORMACION GAO
+# =========================================================
+
+if COL_GAO:
+
+    st.subheader(
+        "Capacidad de Innovación y Transformación GAO"
+    )
+
+    gao_stats = df_op.groupby(
+        COL_GAO,
+        as_index=False
+    ).size()
+
+    gao_stats.columns = [
+        'GAO',
+        'ACTIVIDAD_OPERACIONAL'
+    ]
+
+    gao_stats['CAPACIDAD_TRANSFORMACION'] = (
+
+        gao_stats['ACTIVIDAD_OPERACIONAL']
+        /
+        gao_stats['ACTIVIDAD_OPERACIONAL'].max()
+
+    ) * 100
+
+    fig_gao = px.bar(
+
+        gao_stats.sort_values(
+            by='CAPACIDAD_TRANSFORMACION',
+            ascending=False
+        ).head(15),
+
+        x='GAO',
+
+        y='CAPACIDAD_TRANSFORMACION',
+
+        color='CAPACIDAD_TRANSFORMACION',
+
+        color_continuous_scale='Turbo'
+    )
+
+    st.plotly_chart(
+        fig_gao,
+        use_container_width=True
+    )
+
+# =========================================================
+# ESCENARIOS PROSPECTIVOS
 # =========================================================
 
 st.subheader(
@@ -628,60 +672,6 @@ fig_prosp = px.bar(
 
 st.plotly_chart(
     fig_prosp,
-    use_container_width=True
-)
-
-# =========================================================
-# ANALISIS CAUSAL
-# =========================================================
-
-st.subheader(
-    "Análisis Causal"
-)
-
-causal = df_filtrado.groupby(
-    'MUNICIPIO',
-    as_index=False
-).agg({
-
-    'EVENTOS':'sum',
-
-    'GAO_PRESENTES':'mean',
-
-    'UNIDADES_EXPUESTAS':'mean',
-
-    'RIESGO':'mean'
-})
-
-causal['FACTOR_CAUSAL'] = (
-
-    causal['EVENTOS'] * 0.4 +
-
-    causal['GAO_PRESENTES'] * 0.3 +
-
-    causal['UNIDADES_EXPUESTAS'] * 0.2 +
-
-    causal['RIESGO'] * 0.1
-)
-
-fig_causal = px.bar(
-
-    causal.sort_values(
-        by='FACTOR_CAUSAL',
-        ascending=False
-    ).head(20),
-
-    x='MUNICIPIO',
-
-    y='FACTOR_CAUSAL',
-
-    color='FACTOR_CAUSAL',
-
-    color_continuous_scale='Turbo'
-)
-
-st.plotly_chart(
-    fig_causal,
     use_container_width=True
 )
 
@@ -755,7 +745,63 @@ if all(existe(df_filtrado,c) for c in features+[target]):
         )
 
 # =========================================================
-# GRAFOS RELACIONALES
+# CLUSTERING TERRITORIAL
+# =========================================================
+
+cluster_cols = [
+
+    'RIESGO',
+    'EVENTOS',
+    'IET',
+    'GAO_PRESENTES'
+]
+
+if all(existe(df_filtrado,c) for c in cluster_cols):
+
+    st.subheader(
+        "Clustering Territorial"
+    )
+
+    cluster_df = df_filtrado[
+        ['MUNICIPIO'] + cluster_cols
+    ].dropna()
+
+    modelo_cluster = KMeans(
+
+        n_clusters=4,
+
+        random_state=42,
+
+        n_init=10
+    )
+
+    cluster_df['CLUSTER'] = modelo_cluster.fit_predict(
+
+        cluster_df[cluster_cols]
+    )
+
+    fig_cluster = px.scatter(
+
+        cluster_df,
+
+        x='RIESGO',
+
+        y='EVENTOS',
+
+        size='IET',
+
+        color='CLUSTER',
+
+        hover_name='MUNICIPIO'
+    )
+
+    st.plotly_chart(
+        fig_cluster,
+        use_container_width=True
+    )
+
+# =========================================================
+# REDES RELACIONALES
 # =========================================================
 
 if COL_GAO and existe(df_op,'MUNICIPIO'):
@@ -856,7 +902,7 @@ if COL_GAO and existe(df_op,'MUNICIPIO'):
     )
 
 # =========================================================
-# ALERTAS INTELIGENTES
+# ALERTAS
 # =========================================================
 
 st.subheader(
@@ -924,17 +970,16 @@ for _, row in top.iterrows():
 
     narrativa = f"""
 
-    El municipio de {row['MUNICIPIO']} presenta
-    una condición operacional de tipo
-    {row['TIPO_ALERTA']}.
+    El municipio de {row['MUNICIPIO']}
+    presenta una condición operacional
+    de tipo {row['TIPO_ALERTA']}.
 
-    Se identifica una presión estratégica elevada,
-    asociada a incremento de eventos y presencia
-    de múltiples estructuras armadas.
+    Se identifica incremento de presión
+    territorial y probabilidad de
+    expansión operacional.
 
-    La proyección prospectiva indica probabilidad
-    de escalamiento territorial y expansión
-    operacional en el corto plazo.
+    La evolución prospectiva indica
+    necesidad de monitoreo prioritario.
 
     """
 
@@ -953,8 +998,7 @@ st.subheader(
 excel_buffer = BytesIO()
 
 with pd.ExcelWriter(
-    excel_buffer,
-    engine='xlsxwriter'
+    excel_buffer
 ) as writer:
 
     df_filtrado.to_excel(
@@ -974,7 +1018,7 @@ st.download_button(
 
     file_name="Reporte_Fusion_Territorial.xlsx",
 
-    mime="application/vnd.ms-excel"
+    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 )
 
 # =========================================================
