@@ -1,10 +1,10 @@
 # =========================================================
 # CENTRO DE FUSIÓN GEOESPACIAL E INTELIGENCIA TERRITORIAL
-# VERSION FUSION OPERACIONAL AVANZADA
+# VERSION ESTRATEGICA FINAL AVANZADA
 # FASE:
-# PROSPECTIVA + PRESION SISTEMICA +
-# RIESGO EVOLUTIVO + ALERTAS INTELIGENTES +
-# REDES MULTICAPA + DENSIDAD CRIMINAL
+# ESCENARIOS DINAMICOS + MAPAS TEMPORALES +
+# INTELIGENCIA AUTOMATIZADA + GRAFOS AVANZADOS +
+# PRESION EVOLUTIVA + PRIORIZACION ESTRATEGICA
 # =========================================================
 
 # =========================================================
@@ -318,10 +318,6 @@ df_filtrado['IGE'] = (
     df_filtrado['IPO'] * 0.40
 )
 
-# =========================================================
-# RIESGO EVOLUTIVO
-# =========================================================
-
 df_filtrado['RIESGO_EVOLUTIVO'] = (
 
     df_filtrado['IGE'] * 0.50 +
@@ -332,25 +328,38 @@ df_filtrado['RIESGO_EVOLUTIVO'] = (
 )
 
 # =========================================================
+# PRIORIZACION ESTRATEGICA
+# =========================================================
+
+df_filtrado['PRIORIDAD_ESTRATEGICA'] = (
+
+    df_filtrado['RIESGO_EVOLUTIVO'] * 0.5 +
+
+    df_filtrado['UNIDADES_EXPUESTAS'] * 0.3 +
+
+    df_filtrado['GAO_PRESENTES'] * 0.2
+)
+
+# =========================================================
 # ALERTAS
 # =========================================================
 
 def alerta(v):
 
-    if v >= 35:
+    if v >= 40:
         return "CRITICO"
 
-    elif v >= 25:
+    elif v >= 30:
         return "ALTO"
 
-    elif v >= 15:
+    elif v >= 20:
         return "MEDIO"
 
     else:
         return "BAJO"
 
 df_filtrado['ALERTA'] = df_filtrado[
-    'RIESGO_EVOLUTIVO'
+    'PRIORIDAD_ESTRATEGICA'
 ].apply(alerta)
 
 # =========================================================
@@ -382,35 +391,35 @@ c2.metric(
 )
 
 c3.metric(
-    "IPE",
-    round(df_filtrado['IPE'].mean(),2)
-)
-
-c4.metric(
-    "IPO",
-    round(df_filtrado['IPO'].mean(),2)
-)
-
-c5.metric(
     "IGE",
     round(df_filtrado['IGE'].mean(),2)
 )
 
-c6.metric(
+c4.metric(
     "Riesgo Evolutivo",
     round(df_filtrado['RIESGO_EVOLUTIVO'].mean(),2)
 )
 
-c7.metric(
+c5.metric(
+    "Prioridad Estratégica",
+    round(df_filtrado['PRIORIDAD_ESTRATEGICA'].mean(),2)
+)
+
+c6.metric(
     "Alertas Criticas",
     int(
         (df_filtrado['ALERTA'] == 'CRITICO').sum()
     )
 )
 
-c8.metric(
+c7.metric(
     "GAO Promedio",
     round(df_filtrado['GAO_PRESENTES'].mean(),2)
+)
+
+c8.metric(
+    "Eventos Totales",
+    int(df_filtrado['EVENTOS'].sum())
 )
 
 # =========================================================
@@ -439,7 +448,7 @@ if all(existe(df_filtrado,c) for c in [
 
     ).agg({
 
-        'RIESGO_EVOLUTIVO':'mean',
+        'PRIORIDAD_ESTRATEGICA':'mean',
 
         'EVENTOS':'sum'
     })
@@ -454,7 +463,7 @@ if all(existe(df_filtrado,c) for c in [
 
         size='EVENTOS',
 
-        color='RIESGO_EVOLUTIVO',
+        color='PRIORIDAD_ESTRATEGICA',
 
         hover_name='MUNICIPIO',
 
@@ -471,6 +480,56 @@ if all(existe(df_filtrado,c) for c in [
 
     st.plotly_chart(
         fig_map,
+        use_container_width=True
+    )
+
+# =========================================================
+# MAPA TEMPORAL
+# =========================================================
+
+if existe(df_filtrado,'SEMANA') and all(
+
+    existe(df_filtrado,c)
+
+    for c in ['LATITUD','LONGITUD']
+
+):
+
+    st.subheader(
+        "Mapa Temporal Dinámico"
+    )
+
+    temporal = df_filtrado.copy()
+
+    fig_time = px.scatter_mapbox(
+
+        temporal,
+
+        lat='LATITUD',
+
+        lon='LONGITUD',
+
+        color='RIESGO_EVOLUTIVO',
+
+        size='EVENTOS',
+
+        animation_frame='SEMANA',
+
+        hover_name='MUNICIPIO',
+
+        zoom=4,
+
+        height=700,
+
+        color_continuous_scale='Turbo'
+    )
+
+    fig_time.update_layout(
+        mapbox_style='carto-darkmatter'
+    )
+
+    st.plotly_chart(
+        fig_time,
         use_container_width=True
     )
 
@@ -498,7 +557,7 @@ if all(existe(df_filtrado,c) for c in [
 
         z='RIESGO_EVOLUTIVO',
 
-        radius=45,
+        radius=50,
 
         zoom=4,
 
@@ -513,11 +572,11 @@ if all(existe(df_filtrado,c) for c in [
     )
 
 # =========================================================
-# SIMULACION PROSPECTIVA
+# ESCENARIOS PROSPECTIVOS
 # =========================================================
 
 st.subheader(
-    "Simulación Prospectiva"
+    "Escenarios Prospectivos"
 )
 
 prospectiva = df_filtrado.groupby(
@@ -532,27 +591,27 @@ prospectiva = df_filtrado.groupby(
     'GAO_PRESENTES':'mean'
 })
 
-prospectiva['RIESGO_FUTURO'] = (
+prospectiva['ESCENARIO_FUTURO'] = (
 
     prospectiva['EVENTOS'] * 0.4 +
 
     prospectiva['RIESGO'] * 0.4 +
 
     prospectiva['GAO_PRESENTES'] * 0.2
-) * 1.20
+) * 1.25
 
 fig_prosp = px.bar(
 
     prospectiva.sort_values(
-        by='RIESGO_FUTURO',
+        by='ESCENARIO_FUTURO',
         ascending=False
     ).head(20),
 
     x='MUNICIPIO',
 
-    y='RIESGO_FUTURO',
+    y='ESCENARIO_FUTURO',
 
-    color='RIESGO_FUTURO',
+    color='ESCENARIO_FUTURO',
 
     color_continuous_scale='Turbo'
 )
@@ -567,7 +626,7 @@ st.plotly_chart(
 # =========================================================
 
 st.subheader(
-    "Presión Sistémica Regional"
+    "Presión Sistémica"
 )
 
 presion = df_filtrado.groupby(
@@ -686,62 +745,6 @@ if all(existe(df_filtrado,c) for c in features+[target]):
         )
 
 # =========================================================
-# CLUSTERING
-# =========================================================
-
-cluster_cols = [
-
-    'RIESGO',
-    'EVENTOS',
-    'IET',
-    'GAO_PRESENTES'
-]
-
-if all(existe(df_filtrado,c) for c in cluster_cols):
-
-    st.subheader(
-        "Clustering Territorial"
-    )
-
-    cluster_df = df_filtrado[
-        ['MUNICIPIO'] + cluster_cols
-    ].dropna()
-
-    modelo_cluster = KMeans(
-
-        n_clusters=4,
-
-        random_state=42,
-
-        n_init=10
-    )
-
-    cluster_df['CLUSTER'] = modelo_cluster.fit_predict(
-
-        cluster_df[cluster_cols]
-    )
-
-    fig_cluster = px.scatter(
-
-        cluster_df,
-
-        x='RIESGO',
-
-        y='EVENTOS',
-
-        color='CLUSTER',
-
-        size='IET',
-
-        hover_name='MUNICIPIO'
-    )
-
-    st.plotly_chart(
-        fig_cluster,
-        use_container_width=True
-    )
-
-# =========================================================
 # REDES MULTICAPA
 # =========================================================
 
@@ -796,59 +799,103 @@ if COL_GAO and existe(df_op,'MUNICIPIO'):
     )
 
 # =========================================================
-# CORREDORES EVOLUTIVOS
+# GRAFO INTERACTIVO
 # =========================================================
 
-if COL_GAO and existe(df_op,'DEPARTAMENTO'):
+if COL_GAO and existe(df_op,'MUNICIPIO'):
 
     st.subheader(
-        "Corredores Evolutivos"
+        "Grafo Relacional"
     )
 
-    corredores = df_op.groupby(
-        'DEPARTAMENTO',
-        as_index=False
-    ).agg({
+    G = nx.Graph()
 
-        COL_GAO:'nunique',
+    red = df_op[
+        [COL_GAO,'MUNICIPIO']
+    ].dropna()
 
-        'MUNICIPIO':'nunique'
-    })
+    for _, row in red.iterrows():
 
-    corredores.columns = [
+        G.add_edge(
+            row[COL_GAO],
+            row['MUNICIPIO']
+        )
 
-        'DEPARTAMENTO',
-
-        'GAO',
-
-        'MUNICIPIOS'
-    ]
-
-    corredores['CORREDOR_SCORE'] = (
-
-        corredores['GAO'] * 0.6 +
-
-        corredores['MUNICIPIOS'] * 0.4
+    pos = nx.spring_layout(
+        G,
+        seed=42
     )
 
-    fig_corr = px.bar(
+    edge_x = []
+    edge_y = []
 
-        corredores.sort_values(
-            by='CORREDOR_SCORE',
-            ascending=False
-        ),
+    for edge in G.edges():
 
-        x='DEPARTAMENTO',
+        x0, y0 = pos[edge[0]]
+        x1, y1 = pos[edge[1]]
 
-        y='CORREDOR_SCORE',
+        edge_x.extend([x0, x1, None])
+        edge_y.extend([y0, y1, None])
 
-        color='CORREDOR_SCORE',
+    edge_trace = go.Scatter(
 
-        color_continuous_scale='Turbo'
+        x=edge_x,
+        y=edge_y,
+
+        line=dict(width=0.5),
+
+        hoverinfo='none',
+
+        mode='lines'
+    )
+
+    node_x = []
+    node_y = []
+    node_text = []
+
+    for node in G.nodes():
+
+        x, y = pos[node]
+
+        node_x.append(x)
+        node_y.append(y)
+        node_text.append(str(node))
+
+    node_trace = go.Scatter(
+
+        x=node_x,
+        y=node_y,
+
+        mode='markers+text',
+
+        text=node_text,
+
+        textposition="top center",
+
+        hoverinfo='text',
+
+        marker=dict(
+            size=10,
+            color='cyan'
+        )
+    )
+
+    fig_grafo = go.Figure(
+
+        data=[edge_trace, node_trace]
+    )
+
+    fig_grafo.update_layout(
+
+        showlegend=False,
+
+        height=700,
+
+        template='plotly_dark'
     )
 
     st.plotly_chart(
-        fig_corr,
+        fig_grafo,
         use_container_width=True
     )
 
@@ -915,7 +962,7 @@ alertas = df_filtrado.groupby(
     as_index=False
 ).agg({
 
-    'RIESGO_EVOLUTIVO':'mean',
+    'PRIORIDAD_ESTRATEGICA':'mean',
 
     'EVENTOS':'sum',
 
@@ -925,7 +972,7 @@ alertas = df_filtrado.groupby(
 alertas['TIPO_ALERTA'] = np.where(
 
     (
-        (alertas['RIESGO_EVOLUTIVO'] >= 25) &
+        (alertas['PRIORIDAD_ESTRATEGICA'] >= 30) &
         (alertas['GAO_PRESENTES'] >= 2)
     ),
 
@@ -944,12 +991,41 @@ alertas['TIPO_ALERTA'] = np.where(
 st.dataframe(
 
     alertas.sort_values(
-        by='RIESGO_EVOLUTIVO',
+        by='PRIORIDAD_ESTRATEGICA',
         ascending=False
     ),
 
     use_container_width=True
 )
+
+# =========================================================
+# INTELIGENCIA AUTOMATIZADA
+# =========================================================
+
+st.subheader(
+    "Resumen Automatizado"
+)
+
+top = alertas.sort_values(
+
+    by='PRIORIDAD_ESTRATEGICA',
+
+    ascending=False
+
+).head(5)
+
+for _, row in top.iterrows():
+
+    st.markdown(f"""
+
+    ### {row['MUNICIPIO']}
+
+    - Prioridad Estratégica: {round(row['PRIORIDAD_ESTRATEGICA'],2)}
+    - Eventos: {int(row['EVENTOS'])}
+    - GAO Presentes: {round(row['GAO_PRESENTES'],2)}
+    - Tipo Alerta: {row['TIPO_ALERTA']}
+
+    """)
 
 # =========================================================
 # TABLA FINAL
