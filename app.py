@@ -1,10 +1,10 @@
 # =========================================================
 # CENTRO DE FUSIÓN GEOESPACIAL E INTELIGENCIA TERRITORIAL
-# VERSION OPERACIONAL AVANZADA
+# VERSION ESTRATEGICA AVANZADA
 # FASE:
-# INTELIGENCIA RELACIONAL + CORREDORES +
-# PRESION PERIFERICA + EXPANSION DINAMICA +
-# ALERTAS PREDICTIVAS + DETECCION DE NODOS
+# SIMULACION PROSPECTIVA + DENSIDAD OPERACIONAL +
+# ALERTAS DINAMICAS + CORREDORES EVOLUTIVOS +
+# RIESGO ACUMULADO + PRESION MULTICAPA
 # =========================================================
 
 # =========================================================
@@ -34,7 +34,7 @@ import networkx as nx
 
 st.set_page_config(
 
-    page_title="Fusion Territorial Avanzada",
+    page_title="Fusion Territorial Estratégica",
 
     layout="wide"
 )
@@ -189,16 +189,6 @@ COL_ACTIVIDAD = detectar_columna(
     [
         "ACTIVIDAD",
         "TIPO_DE_ACTIVIDAD"
-    ],
-
-    df_op
-)
-
-COL_AFECTACION = detectar_columna(
-
-    [
-        "TIPO_DE_AFECTACION",
-        "TIPO_DE_AFECTACIÓN"
     ],
 
     df_op
@@ -366,7 +356,7 @@ st.subheader(
     "Indicadores Estratégicos"
 )
 
-c1,c2,c3,c4,c5,c6,c7 = st.columns(7)
+c1,c2,c3,c4,c5,c6,c7,c8 = st.columns(8)
 
 c1.metric(
     "Municipios",
@@ -403,6 +393,11 @@ c7.metric(
     int(
         (df_filtrado['ALERTA'] == 'CRITICO').sum()
     )
+)
+
+c8.metric(
+    "Riesgo Acumulado",
+    round(df_filtrado['IGE'].sum(),2)
 )
 
 # =========================================================
@@ -467,7 +462,7 @@ if all(existe(df_filtrado,c) for c in [
     )
 
 # =========================================================
-# MAPA CALOR
+# MAPA DENSIDAD OPERACIONAL
 # =========================================================
 
 if all(existe(df_filtrado,c) for c in [
@@ -477,10 +472,10 @@ if all(existe(df_filtrado,c) for c in [
 ]):
 
     st.subheader(
-        "Mapa Calor Territorial"
+        "Densidad Operacional"
     )
 
-    fig_heat = px.density_mapbox(
+    fig_density = px.density_mapbox(
 
         df_filtrado,
 
@@ -490,7 +485,7 @@ if all(existe(df_filtrado,c) for c in [
 
         z='EVENTOS',
 
-        radius=35,
+        radius=40,
 
         zoom=4,
 
@@ -500,7 +495,7 @@ if all(existe(df_filtrado,c) for c in [
     )
 
     st.plotly_chart(
-        fig_heat,
+        fig_density,
         use_container_width=True
     )
 
@@ -541,11 +536,61 @@ if existe(df_filtrado,'SEMANA'):
     )
 
 # =========================================================
-# PRESION PERIFERICA
+# SIMULACION PROSPECTIVA
 # =========================================================
 
 st.subheader(
-    "Presión Periférica"
+    "Simulación Prospectiva"
+)
+
+prospectiva = df_filtrado.groupby(
+    'MUNICIPIO',
+    as_index=False
+).agg({
+
+    'EVENTOS':'sum',
+
+    'RIESGO':'mean',
+
+    'GAO_PRESENTES':'mean'
+})
+
+prospectiva['RIESGO_FUTURO'] = (
+
+    prospectiva['EVENTOS'] * 0.4 +
+
+    prospectiva['RIESGO'] * 0.4 +
+
+    prospectiva['GAO_PRESENTES'] * 0.2
+) * 1.15
+
+fig_prosp = px.bar(
+
+    prospectiva.sort_values(
+        by='RIESGO_FUTURO',
+        ascending=False
+    ).head(20),
+
+    x='MUNICIPIO',
+
+    y='RIESGO_FUTURO',
+
+    color='RIESGO_FUTURO',
+
+    color_continuous_scale='Turbo'
+)
+
+st.plotly_chart(
+    fig_prosp,
+    use_container_width=True
+)
+
+# =========================================================
+# PRESION MULTICAPA
+# =========================================================
+
+st.subheader(
+    "Presión Multicapa Regional"
 )
 
 presion = df_filtrado.groupby(
@@ -557,30 +602,34 @@ presion = df_filtrado.groupby(
 
     'RIESGO':'mean',
 
-    'GAO_PRESENTES':'mean'
+    'GAO_PRESENTES':'mean',
+
+    'UNIDADES_EXPUESTAS':'mean'
 })
 
-presion['PRESION_OPERACIONAL'] = (
+presion['PRESION_MULTICAPA'] = (
 
-    presion['EVENTOS'] * 0.5 +
+    presion['EVENTOS'] * 0.4 +
 
     presion['RIESGO'] * 0.3 +
 
-    presion['GAO_PRESENTES'] * 0.2
+    presion['GAO_PRESENTES'] * 0.2 +
+
+    presion['UNIDADES_EXPUESTAS'] * 0.1
 )
 
 fig_presion = px.bar(
 
     presion.sort_values(
-        by='PRESION_OPERACIONAL',
+        by='PRESION_MULTICAPA',
         ascending=False
     ),
 
     x='DEPARTAMENTO',
 
-    y='PRESION_OPERACIONAL',
+    y='PRESION_MULTICAPA',
 
-    color='PRESION_OPERACIONAL',
+    color='PRESION_MULTICAPA',
 
     color_continuous_scale='Turbo'
 )
@@ -660,71 +709,6 @@ if all(existe(df_filtrado,c) for c in features+[target]):
         )
 
 # =========================================================
-# ANOMALIAS
-# =========================================================
-
-anom_cols = [
-
-    'EVENTOS',
-    'RIESGO',
-    'IET',
-    'GAO_PRESENTES',
-    'UNIDADES_EXPUESTAS'
-]
-
-if all(existe(df_filtrado,c) for c in anom_cols):
-
-    st.subheader(
-        "Anomalías Estratégicas"
-    )
-
-    anom_df = df_filtrado[
-        ['MUNICIPIO'] + anom_cols
-    ].dropna()
-
-    detector = IsolationForest(
-
-        contamination=0.05,
-
-        random_state=42
-    )
-
-    detector.fit(
-        anom_df[anom_cols]
-    )
-
-    anom_df['ANOMALIA'] = detector.predict(
-
-        anom_df[anom_cols]
-    )
-
-    anomalos = anom_df[
-        anom_df['ANOMALIA'] == -1
-    ]
-
-    fig_anom = px.scatter(
-
-        anomalos,
-
-        x='RIESGO',
-
-        y='EVENTOS',
-
-        size='IET',
-
-        color='UNIDADES_EXPUESTAS',
-
-        hover_name='MUNICIPIO',
-
-        color_continuous_scale='Turbo'
-    )
-
-    st.plotly_chart(
-        fig_anom,
-        use_container_width=True
-    )
-
-# =========================================================
 # CLUSTERING
 # =========================================================
 
@@ -777,64 +761,6 @@ if all(existe(df_filtrado,c) for c in cluster_cols):
 
     st.plotly_chart(
         fig_cluster,
-        use_container_width=True
-    )
-
-# =========================================================
-# INNOVACION Y TRANSFORMACION GAO
-# =========================================================
-
-if COL_GAO and COL_ACTIVIDAD:
-
-    st.subheader(
-        "Capacidad Innovación y Transformación GAO"
-    )
-
-    org = df_op.groupby(
-        COL_GAO,
-        as_index=False
-    ).agg({
-
-        'MUNICIPIO':'nunique',
-
-        COL_ACTIVIDAD:'nunique'
-    })
-
-    org.columns = [
-
-        'ORGANIZACION',
-
-        'EXPANSION',
-
-        'TACTICAS'
-    ]
-
-    org['ADAPTACION'] = (
-
-        org['EXPANSION'] * 0.5 +
-
-        org['TACTICAS'] * 0.5
-    )
-
-    fig_org = px.scatter(
-
-        org,
-
-        x='EXPANSION',
-
-        y='TACTICAS',
-
-        size='ADAPTACION',
-
-        color='ADAPTACION',
-
-        hover_name='ORGANIZACION',
-
-        color_continuous_scale='Turbo'
-    )
-
-    st.plotly_chart(
-        fig_org,
         use_container_width=True
     )
 
@@ -893,13 +819,13 @@ if COL_GAO and existe(df_op,'MUNICIPIO'):
     )
 
 # =========================================================
-# CORREDORES REALES
+# CORREDORES EVOLUTIVOS
 # =========================================================
 
 if COL_GAO and existe(df_op,'DEPARTAMENTO'):
 
     st.subheader(
-        "Corredores Operacionales Reales"
+        "Corredores Evolutivos"
     )
 
     corredores = df_op.groupby(
@@ -950,7 +876,7 @@ if COL_GAO and existe(df_op,'DEPARTAMENTO'):
     )
 
 # =========================================================
-# DETECCION DE NODOS CRITICOS
+# DETECCION NODOS CRITICOS
 # =========================================================
 
 st.subheader(
@@ -1000,11 +926,11 @@ st.plotly_chart(
 )
 
 # =========================================================
-# ALERTAS PREDICTIVAS
+# ALERTAS DINAMICAS
 # =========================================================
 
 st.subheader(
-    "Alertas Predictivas"
+    "Alertas Dinámicas"
 )
 
 alertas = df_filtrado.groupby(
