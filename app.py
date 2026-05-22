@@ -1,12 +1,7 @@
 # =========================================================
 # CENTRO DE FUSIÓN GEOESPACIAL E INTELIGENCIA TERRITORIAL
-# VERSION ENTERPRISE ESTABLE FINAL
-# CORRECCION GLOBAL:
-# - EXPORTACION EXCEL
-# - RECUPERACION GRAFICOS
-# - RECUPERACION MAPAS
-# - ESTABILIDAD STREAMLIT CLOUD
-# - VALIDACION COLUMNAS
+# VERSION FINAL OPERACIONAL ESTABLE
+# RELEASE FINAL
 # =========================================================
 
 # =========================================================
@@ -28,8 +23,6 @@ from sklearn.cluster import KMeans
 from xgboost import XGBClassifier
 
 import networkx as nx
-
-from io import BytesIO
 
 # =========================================================
 # CONFIG
@@ -251,7 +244,7 @@ if anio_sel:
     ]
 
 # =========================================================
-# CONVERSION NUMERICA
+# NUMERICOS
 # =========================================================
 
 numericas = [
@@ -457,7 +450,7 @@ if all(existe(df_filtrado,c) for c in [
     )
 
 # =========================================================
-# MAPA TEMPORAL
+# MAPA TEMPORAL DINAMICO
 # =========================================================
 
 if existe(df_filtrado,'SEMANA') and all(
@@ -505,7 +498,7 @@ if existe(df_filtrado,'SEMANA') and all(
     )
 
 # =========================================================
-# DENSIDAD CRIMINAL
+# MAPA DENSIDAD CRIMINAL
 # =========================================================
 
 if all(existe(df_filtrado,c) for c in [
@@ -801,7 +794,7 @@ if all(existe(df_filtrado,c) for c in cluster_cols):
     )
 
 # =========================================================
-# REDES RELACIONALES
+# GRAFOS RELACIONALES
 # =========================================================
 
 if COL_GAO and existe(df_op,'MUNICIPIO'):
@@ -902,7 +895,7 @@ if COL_GAO and existe(df_op,'MUNICIPIO'):
     )
 
 # =========================================================
-# ALERTAS
+# ALERTAS INTELIGENTES
 # =========================================================
 
 st.subheader(
@@ -951,7 +944,7 @@ st.dataframe(
 )
 
 # =========================================================
-# MOTOR NARRATIVO IA
+# NARRATIVA IA
 # =========================================================
 
 st.subheader(
@@ -986,40 +979,6 @@ for _, row in top.iterrows():
     st.markdown(
         narrativa
     )
-
-# =========================================================
-# EXPORTACION EJECUTIVA
-# =========================================================
-
-st.subheader(
-    "Exportación Ejecutiva"
-)
-
-excel_buffer = BytesIO()
-
-with pd.ExcelWriter(
-    excel_buffer
-) as writer:
-
-    df_filtrado.to_excel(
-
-        writer,
-
-        index=False,
-
-        sheet_name='Fusion_Territorial'
-    )
-
-st.download_button(
-
-    label="Descargar Reporte Estratégico Excel",
-
-    data=excel_buffer.getvalue(),
-
-    file_name="Reporte_Fusion_Territorial.xlsx",
-
-    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-)
 
 # =========================================================
 # TABLA FINAL
