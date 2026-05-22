@@ -1,9 +1,10 @@
 # =========================================================
 # CENTRO DE FUSIÓN GEOESPACIAL E INTELIGENCIA TERRITORIAL
-# VERSION FASE AVANZADA
+# VERSION OPERACIONAL AVANZADA
 # FASE:
-# GRAFOS + EXPANSION TEMPORAL + CORREDORES REALES
-# + PRESION PERIFERICA + ALERTAS DINAMICAS
+# INTELIGENCIA RELACIONAL + CORREDORES +
+# PRESION PERIFERICA + EXPANSION DINAMICA +
+# ALERTAS PREDICTIVAS + DETECCION DE NODOS
 # =========================================================
 
 # =========================================================
@@ -33,7 +34,7 @@ import networkx as nx
 
 st.set_page_config(
 
-    page_title="Fusion Territorial",
+    page_title="Fusion Territorial Avanzada",
 
     layout="wide"
 )
@@ -365,7 +366,7 @@ st.subheader(
     "Indicadores Estratégicos"
 )
 
-c1,c2,c3,c4,c5,c6 = st.columns(6)
+c1,c2,c3,c4,c5,c6,c7 = st.columns(7)
 
 c1.metric(
     "Municipios",
@@ -395,6 +396,13 @@ c5.metric(
 c6.metric(
     "GAO",
     round(df_filtrado['GAO_PRESENTES'].mean(),2)
+)
+
+c7.metric(
+    "Alertas Criticas",
+    int(
+        (df_filtrado['ALERTA'] == 'CRITICO').sum()
+    )
 )
 
 # =========================================================
@@ -482,7 +490,7 @@ if all(existe(df_filtrado,c) for c in [
 
         z='EVENTOS',
 
-        radius=30,
+        radius=35,
 
         zoom=4,
 
@@ -506,7 +514,7 @@ if existe(df_filtrado,'SEMANA'):
         "Expansión Temporal"
     )
 
-    exp_temp = df_filtrado.groupby(
+    exp = df_filtrado.groupby(
         'SEMANA',
         as_index=False
     ).agg({
@@ -518,7 +526,7 @@ if existe(df_filtrado,'SEMANA'):
 
     fig_exp = px.line(
 
-        exp_temp,
+        exp,
 
         x='SEMANA',
 
@@ -533,14 +541,14 @@ if existe(df_filtrado,'SEMANA'):
     )
 
 # =========================================================
-# PROPAGACION REGIONAL
+# PRESION PERIFERICA
 # =========================================================
 
 st.subheader(
-    "Presión y Propagación Regional"
+    "Presión Periférica"
 )
 
-prop = df_filtrado.groupby(
+presion = df_filtrado.groupby(
     'DEPARTAMENTO',
     as_index=False
 ).agg({
@@ -552,33 +560,33 @@ prop = df_filtrado.groupby(
     'GAO_PRESENTES':'mean'
 })
 
-prop['PRESION'] = (
+presion['PRESION_OPERACIONAL'] = (
 
-    prop['EVENTOS'] * 0.5 +
+    presion['EVENTOS'] * 0.5 +
 
-    prop['RIESGO'] * 0.3 +
+    presion['RIESGO'] * 0.3 +
 
-    prop['GAO_PRESENTES'] * 0.2
+    presion['GAO_PRESENTES'] * 0.2
 )
 
-fig_prop = px.bar(
+fig_presion = px.bar(
 
-    prop.sort_values(
-        by='PRESION',
+    presion.sort_values(
+        by='PRESION_OPERACIONAL',
         ascending=False
     ),
 
     x='DEPARTAMENTO',
 
-    y='PRESION',
+    y='PRESION_OPERACIONAL',
 
-    color='PRESION',
+    color='PRESION_OPERACIONAL',
 
     color_continuous_scale='Turbo'
 )
 
 st.plotly_chart(
-    fig_prop,
+    fig_presion,
     use_container_width=True
 )
 
@@ -652,6 +660,71 @@ if all(existe(df_filtrado,c) for c in features+[target]):
         )
 
 # =========================================================
+# ANOMALIAS
+# =========================================================
+
+anom_cols = [
+
+    'EVENTOS',
+    'RIESGO',
+    'IET',
+    'GAO_PRESENTES',
+    'UNIDADES_EXPUESTAS'
+]
+
+if all(existe(df_filtrado,c) for c in anom_cols):
+
+    st.subheader(
+        "Anomalías Estratégicas"
+    )
+
+    anom_df = df_filtrado[
+        ['MUNICIPIO'] + anom_cols
+    ].dropna()
+
+    detector = IsolationForest(
+
+        contamination=0.05,
+
+        random_state=42
+    )
+
+    detector.fit(
+        anom_df[anom_cols]
+    )
+
+    anom_df['ANOMALIA'] = detector.predict(
+
+        anom_df[anom_cols]
+    )
+
+    anomalos = anom_df[
+        anom_df['ANOMALIA'] == -1
+    ]
+
+    fig_anom = px.scatter(
+
+        anomalos,
+
+        x='RIESGO',
+
+        y='EVENTOS',
+
+        size='IET',
+
+        color='UNIDADES_EXPUESTAS',
+
+        hover_name='MUNICIPIO',
+
+        color_continuous_scale='Turbo'
+    )
+
+    st.plotly_chart(
+        fig_anom,
+        use_container_width=True
+    )
+
+# =========================================================
 # CLUSTERING
 # =========================================================
 
@@ -704,6 +777,64 @@ if all(existe(df_filtrado,c) for c in cluster_cols):
 
     st.plotly_chart(
         fig_cluster,
+        use_container_width=True
+    )
+
+# =========================================================
+# INNOVACION Y TRANSFORMACION GAO
+# =========================================================
+
+if COL_GAO and COL_ACTIVIDAD:
+
+    st.subheader(
+        "Capacidad Innovación y Transformación GAO"
+    )
+
+    org = df_op.groupby(
+        COL_GAO,
+        as_index=False
+    ).agg({
+
+        'MUNICIPIO':'nunique',
+
+        COL_ACTIVIDAD:'nunique'
+    })
+
+    org.columns = [
+
+        'ORGANIZACION',
+
+        'EXPANSION',
+
+        'TACTICAS'
+    ]
+
+    org['ADAPTACION'] = (
+
+        org['EXPANSION'] * 0.5 +
+
+        org['TACTICAS'] * 0.5
+    )
+
+    fig_org = px.scatter(
+
+        org,
+
+        x='EXPANSION',
+
+        y='TACTICAS',
+
+        size='ADAPTACION',
+
+        color='ADAPTACION',
+
+        hover_name='ORGANIZACION',
+
+        color_continuous_scale='Turbo'
+    )
+
+    st.plotly_chart(
+        fig_org,
         use_container_width=True
     )
 
@@ -762,158 +893,118 @@ if COL_GAO and existe(df_op,'MUNICIPIO'):
     )
 
 # =========================================================
-# GRAFO OPERACIONAL
+# CORREDORES REALES
 # =========================================================
 
-if COL_GAO and existe(df_op,'MUNICIPIO'):
+if COL_GAO and existe(df_op,'DEPARTAMENTO'):
 
     st.subheader(
-        "Grafo Operacional"
+        "Corredores Operacionales Reales"
     )
 
-    G = nx.Graph()
+    corredores = df_op.groupby(
+        'DEPARTAMENTO',
+        as_index=False
+    ).agg({
 
-    red = df_op[
-        [COL_GAO,'MUNICIPIO']
-    ].dropna()
+        COL_GAO:'nunique',
 
-    for _, row in red.iterrows():
+        'MUNICIPIO':'nunique'
+    })
 
-        G.add_edge(
-            row[COL_GAO],
-            row['MUNICIPIO']
-        )
+    corredores.columns = [
 
-    pos = nx.spring_layout(
-        G,
-        seed=42
-    )
+        'DEPARTAMENTO',
 
-    edge_x = []
-    edge_y = []
+        'GAO',
 
-    for edge in G.edges():
-
-        x0, y0 = pos[edge[0]]
-        x1, y1 = pos[edge[1]]
-
-        edge_x.extend(
-            [x0, x1, None]
-        )
-
-        edge_y.extend(
-            [y0, y1, None]
-        )
-
-    edge_trace = go.Scatter(
-
-        x=edge_x,
-        y=edge_y,
-
-        line=dict(width=0.5),
-
-        hoverinfo='none',
-
-        mode='lines'
-    )
-
-    node_x = []
-    node_y = []
-    node_text = []
-
-    for node in G.nodes():
-
-        x, y = pos[node]
-
-        node_x.append(x)
-        node_y.append(y)
-        node_text.append(str(node))
-
-    node_trace = go.Scatter(
-
-        x=node_x,
-        y=node_y,
-
-        mode='markers+text',
-
-        text=node_text,
-
-        textposition="top center",
-
-        hoverinfo='text',
-
-        marker=dict(
-            size=10,
-            color='cyan'
-        )
-    )
-
-    fig_grafo = go.Figure(
-
-        data=[edge_trace, node_trace]
-    )
-
-    fig_grafo.update_layout(
-
-        showlegend=False,
-
-        height=700,
-
-        template='plotly_dark'
-    )
-
-    st.plotly_chart(
-        fig_grafo,
-        use_container_width=True
-    )
-
-# =========================================================
-# CONVERGENCIA CRIMINAL
-# =========================================================
-
-if COL_GAO and existe(df_op,'MUNICIPIO'):
-
-    st.subheader(
-        "Convergencia Criminal"
-    )
-
-    conv = df_op.groupby(
-        'MUNICIPIO'
-    )[COL_GAO].nunique().reset_index()
-
-    conv.columns = [
-
-        'MUNICIPIO',
-        'GAO_CONVERGENTES'
+        'MUNICIPIOS'
     ]
 
-    fig_conv = px.bar(
+    corredores['CORREDOR_SCORE'] = (
 
-        conv.sort_values(
-            by='GAO_CONVERGENTES',
+        corredores['GAO'] * 0.6 +
+
+        corredores['MUNICIPIOS'] * 0.4
+    )
+
+    fig_corr = px.bar(
+
+        corredores.sort_values(
+            by='CORREDOR_SCORE',
             ascending=False
-        ).head(20),
+        ),
 
-        x='MUNICIPIO',
+        x='DEPARTAMENTO',
 
-        y='GAO_CONVERGENTES',
+        y='CORREDOR_SCORE',
 
-        color='GAO_CONVERGENTES',
+        color='CORREDOR_SCORE',
 
         color_continuous_scale='Turbo'
     )
 
     st.plotly_chart(
-        fig_conv,
+        fig_corr,
         use_container_width=True
     )
 
 # =========================================================
-# ALERTAS AVANZADAS
+# DETECCION DE NODOS CRITICOS
 # =========================================================
 
 st.subheader(
-    "Alertas Avanzadas"
+    "Nodos Críticos"
+)
+
+nodos = df_filtrado.groupby(
+    'MUNICIPIO',
+    as_index=False
+).agg({
+
+    'EVENTOS':'sum',
+
+    'RIESGO':'mean',
+
+    'GAO_PRESENTES':'mean'
+})
+
+nodos['NODO_SCORE'] = (
+
+    nodos['EVENTOS'] * 0.5 +
+
+    nodos['RIESGO'] * 0.3 +
+
+    nodos['GAO_PRESENTES'] * 0.2
+)
+
+fig_nodos = px.bar(
+
+    nodos.sort_values(
+        by='NODO_SCORE',
+        ascending=False
+    ).head(20),
+
+    x='MUNICIPIO',
+
+    y='NODO_SCORE',
+
+    color='NODO_SCORE',
+
+    color_continuous_scale='Turbo'
+)
+
+st.plotly_chart(
+    fig_nodos,
+    use_container_width=True
+)
+
+# =========================================================
+# ALERTAS PREDICTIVAS
+# =========================================================
+
+st.subheader(
+    "Alertas Predictivas"
 )
 
 alertas = df_filtrado.groupby(
