@@ -1,8 +1,8 @@
-
 streamlit
 pandas
+numpy
 plotly
 scikit-learn
 xgboost
-geopy
+networkx
 openpyxl
