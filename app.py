@@ -1,6 +1,7 @@
 # =========================================================
 # CENTRO DE FUSIÓN GEOESPACIAL E INTELIGENCIA TERRITORIAL
-# VERSION GEOINT + IA + REDES + CONTAGIO TERRITORIAL
+# VERSION FULL CONSOLIDADA
+# RESTAURA TODOS LOS MODULOS Y GRAFICOS ELIMINADOS
 # VERSION ESTABLE STREAMLIT CLOUD
 # =========================================================
 
@@ -118,7 +119,7 @@ def limpiar_columnas(df):
     return df
 
 # =========================================================
-# CARGA DATOS
+# CARGAR BASES
 # =========================================================
 
 @st.cache_data
@@ -181,7 +182,8 @@ COL_GAO = detectar_columna(
     [
         "GAO",
         "FG/BLOQUE/ESTRUCTURA",
-        "FG_BLOQUE_ESTRUCTURA"
+        "FG_BLOQUE_ESTRUCTURA",
+        "ESTRUCTURA"
     ],
 
     df_op
@@ -192,6 +194,16 @@ COL_ACTIVIDAD = detectar_columna(
     [
         "ACTIVIDAD",
         "TIPO_DE_ACTIVIDAD"
+    ],
+
+    df_op
+)
+
+COL_AFECTACION = detectar_columna(
+
+    [
+        "TIPO_DE_AFECTACION",
+        "TIPO_DE_AFECTACIÓN"
     ],
 
     df_op
@@ -333,28 +345,16 @@ else:
 # IPO
 # =========================================================
 
-if all(existe(df_filtrado, c) for c in [
+df_filtrado['IPO'] = (
 
-    'EVENTOS',
-    'RIESGO',
-    'GAO_PRESENTES',
-    'UNIDADES_EXPUESTAS'
-]):
+    df_filtrado['EVENTOS'] * 0.35 +
 
-    df_filtrado['IPO'] = (
+    df_filtrado['GAO_PRESENTES'] * 0.25 +
 
-        df_filtrado['EVENTOS'] * 0.35 +
+    df_filtrado['UNIDADES_EXPUESTAS'] * 0.20 +
 
-        df_filtrado['GAO_PRESENTES'] * 0.25 +
-
-        df_filtrado['UNIDADES_EXPUESTAS'] * 0.20 +
-
-        df_filtrado['RIESGO'] * 0.20
-    )
-
-else:
-
-    df_filtrado['IPO'] = 0
+    df_filtrado['RIESGO'] * 0.20
+)
 
 # =========================================================
 # IGE
@@ -421,6 +421,8 @@ st.markdown("""
 - Convergencia Criminal
 - Contagio Territorial
 - Corredores Estratégicos
+- Mutación Operacional
+- Adaptación Organizacional
 
 """)
 
@@ -465,7 +467,7 @@ c6.metric(
 )
 
 # =========================================================
-# MAPA GEOINT
+# MAPA GEOESTRATEGICO
 # =========================================================
 
 if all(existe(df_filtrado, c) for c in [
@@ -526,6 +528,44 @@ if all(existe(df_filtrado, c) for c in [
     )
 
 # =========================================================
+# MAPA CALOR
+# =========================================================
+
+if all(existe(df_filtrado, c) for c in [
+
+    'LATITUD',
+    'LONGITUD'
+]):
+
+    st.subheader(
+        "Mapa Calor Operacional"
+    )
+
+    fig_heat_map = px.density_mapbox(
+
+        df_filtrado,
+
+        lat='LATITUD',
+
+        lon='LONGITUD',
+
+        z='EVENTOS',
+
+        radius=25,
+
+        zoom=4,
+
+        height=700,
+
+        mapbox_style='carto-darkmatter'
+    )
+
+    st.plotly_chart(
+        fig_heat_map,
+        use_container_width=True
+    )
+
+# =========================================================
 # MUNICIPIOS PRIORITARIOS
 # =========================================================
 
@@ -562,50 +602,35 @@ st.plotly_chart(
 )
 
 # =========================================================
-# CONTAGIO TERRITORIAL
+# EVOLUCION TEMPORAL
 # =========================================================
 
-st.subheader(
-    "Contagio Territorial"
-)
+if existe(df_filtrado, 'SEMANA'):
 
-contagio = df_filtrado.groupby(
-    'DEPARTAMENTO',
-    as_index=False
-).agg({
+    st.subheader(
+        "Evolución Temporal"
+    )
 
-    'EVENTOS':'sum',
+    temporal = df_filtrado.groupby(
+        'SEMANA',
+        as_index=False
+    )['EVENTOS'].sum()
 
-    'RIESGO':'mean'
-})
+    fig_temp = px.line(
 
-contagio['INDICE_CONTAGIO'] = (
+        temporal,
 
-    contagio['EVENTOS'] * 0.6 +
+        x='SEMANA',
 
-    contagio['RIESGO'] * 0.4
-)
+        y='EVENTOS',
 
-fig_contagio = px.bar(
+        markers=True
+    )
 
-    contagio.sort_values(
-        by='INDICE_CONTAGIO',
-        ascending=False
-    ),
-
-    x='DEPARTAMENTO',
-
-    y='INDICE_CONTAGIO',
-
-    color='INDICE_CONTAGIO',
-
-    color_continuous_scale='Turbo'
-)
-
-st.plotly_chart(
-    fig_contagio,
-    use_container_width=True
-)
+    st.plotly_chart(
+        fig_temp,
+        use_container_width=True
+    )
 
 # =========================================================
 # IA PREDICTIVA
@@ -672,8 +697,48 @@ if all(existe(df_filtrado, c) for c in features + [target]):
         )
 
         st.metric(
-            "Precision IA",
+            "Precisión IA",
             round(acc, 3)
+        )
+
+        probabilidades = modelo.predict_proba(X)[:,1]
+
+        modelo_df['RIESGO_PREDICTIVO'] = (
+            probabilidades * 100
+        )
+
+        predicciones = df_filtrado.loc[
+            modelo_df.index
+        ].copy()
+
+        predicciones['RIESGO_PREDICTIVO'] = (
+            modelo_df['RIESGO_PREDICTIVO']
+        )
+
+        top_pred = predicciones.groupby(
+            'MUNICIPIO',
+            as_index=False
+        )['RIESGO_PREDICTIVO'].mean()
+
+        fig_pred = px.bar(
+
+            top_pred.sort_values(
+                by='RIESGO_PREDICTIVO',
+                ascending=False
+            ).head(20),
+
+            x='MUNICIPIO',
+
+            y='RIESGO_PREDICTIVO',
+
+            color='RIESGO_PREDICTIVO',
+
+            color_continuous_scale='Turbo'
+        )
+
+        st.plotly_chart(
+            fig_pred,
+            use_container_width=True
         )
 
 # =========================================================
@@ -806,6 +871,127 @@ if all(existe(df_filtrado, c) for c in cluster_cols):
         )
 
 # =========================================================
+# INTELIGENCIA ORGANIZACIONAL
+# =========================================================
+
+if COL_GAO and COL_ACTIVIDAD:
+
+    st.subheader(
+        "Capacidad de Innovación y Transformación de los GAO"
+    )
+
+    org = df_op.groupby(
+        COL_GAO,
+        as_index=False
+    ).agg({
+
+        'MUNICIPIO':'nunique',
+
+        COL_ACTIVIDAD:'nunique'
+    })
+
+    org.columns = [
+
+        'ORGANIZACION',
+
+        'EXPANSION',
+
+        'TACTICAS'
+    ]
+
+    org['ADAPTACION'] = (
+
+        org['EXPANSION'] * 0.5 +
+
+        org['TACTICAS'] * 0.5
+    )
+
+    fig_org = px.scatter(
+
+        org,
+
+        x='EXPANSION',
+
+        y='TACTICAS',
+
+        size='ADAPTACION',
+
+        color='ADAPTACION',
+
+        hover_name='ORGANIZACION',
+
+        color_continuous_scale='Turbo'
+    )
+
+    st.plotly_chart(
+        fig_org,
+        use_container_width=True
+    )
+
+# =========================================================
+# MUTACION OPERACIONAL
+# =========================================================
+
+if COL_GAO and COL_ACTIVIDAD and COL_AFECTACION:
+
+    st.subheader(
+        "Mutación Operacional"
+    )
+
+    mutacion = df_op.groupby(
+        COL_GAO,
+        as_index=False
+    ).agg({
+
+        COL_ACTIVIDAD:'nunique',
+
+        COL_AFECTACION:'nunique',
+
+        'MUNICIPIO':'nunique'
+    })
+
+    mutacion.columns = [
+
+        'ORGANIZACION',
+
+        'DIVERSIDAD_ACTIVIDAD',
+
+        'DIVERSIDAD_AFECTACION',
+
+        'EXPANSION'
+    ]
+
+    mutacion['INDICE_MUTACION'] = (
+
+        mutacion['DIVERSIDAD_ACTIVIDAD'] * 0.4 +
+
+        mutacion['DIVERSIDAD_AFECTACION'] * 0.3 +
+
+        mutacion['EXPANSION'] * 0.3
+    )
+
+    fig_mut = px.bar(
+
+        mutacion.sort_values(
+            by='INDICE_MUTACION',
+            ascending=False
+        ),
+
+        x='ORGANIZACION',
+
+        y='INDICE_MUTACION',
+
+        color='INDICE_MUTACION',
+
+        color_continuous_scale='Turbo'
+    )
+
+    st.plotly_chart(
+        fig_mut,
+        use_container_width=True
+    )
+
+# =========================================================
 # CONVERGENCIA CRIMINAL
 # =========================================================
 
@@ -894,6 +1080,52 @@ if COL_GAO and existe(df_op, 'MUNICIPIO'):
     )
 
 # =========================================================
+# CONTAGIO TERRITORIAL
+# =========================================================
+
+st.subheader(
+    "Contagio Territorial"
+)
+
+contagio = df_filtrado.groupby(
+    'DEPARTAMENTO',
+    as_index=False
+).agg({
+
+    'EVENTOS':'sum',
+
+    'RIESGO':'mean'
+})
+
+contagio['INDICE_CONTAGIO'] = (
+
+    contagio['EVENTOS'] * 0.6 +
+
+    contagio['RIESGO'] * 0.4
+)
+
+fig_contagio = px.bar(
+
+    contagio.sort_values(
+        by='INDICE_CONTAGIO',
+        ascending=False
+    ),
+
+    x='DEPARTAMENTO',
+
+    y='INDICE_CONTAGIO',
+
+    color='INDICE_CONTAGIO',
+
+    color_continuous_scale='Turbo'
+)
+
+st.plotly_chart(
+    fig_contagio,
+    use_container_width=True
+)
+
+# =========================================================
 # HUBS OPERACIONALES
 # =========================================================
 
@@ -938,6 +1170,80 @@ fig_hubs = px.bar(
 
 st.plotly_chart(
     fig_hubs,
+    use_container_width=True
+)
+
+# =========================================================
+# MUNICIPIOS EMERGENTES
+# =========================================================
+
+st.subheader(
+    "Municipios Emergentes"
+)
+
+emergentes = df_filtrado.groupby(
+    'MUNICIPIO',
+    as_index=False
+).agg({
+
+    'RIESGO':'mean',
+
+    'EVENTOS':'sum'
+})
+
+emergentes['INDICE_EMERGENTE'] = (
+
+    emergentes['RIESGO'] * 0.6 +
+
+    emergentes['EVENTOS'] * 0.4
+)
+
+emergentes = emergentes.sort_values(
+    by='INDICE_EMERGENTE',
+    ascending=False
+)
+
+fig_emerg = px.bar(
+
+    emergentes.head(20),
+
+    x='MUNICIPIO',
+
+    y='INDICE_EMERGENTE',
+
+    color='INDICE_EMERGENTE',
+
+    color_continuous_scale='Turbo'
+)
+
+st.plotly_chart(
+    fig_emerg,
+    use_container_width=True
+)
+
+# =========================================================
+# MATRIZ ESTRATEGICA
+# =========================================================
+
+st.subheader(
+    "Matriz Estratégica"
+)
+
+fig_matrix = px.density_heatmap(
+
+    df_filtrado,
+
+    x='RIESGO',
+
+    y='EVENTOS',
+
+    z='IET',
+
+    color_continuous_scale='Turbo'
+)
+
+st.plotly_chart(
+    fig_matrix,
     use_container_width=True
 )
 
