@@ -1,7 +1,6 @@
 # =========================================================
 # CENTRO DE FUSIÓN GEOESPACIAL E INTELIGENCIA TERRITORIAL
-# VERSION FINAL OPERACIONAL ESTABLE
-# CORRECCION TOTAL UI + FRONTEND + RENDER
+# VERSION FINAL ESTABLE - FRONTEND CORREGIDO
 # =========================================================
 
 # =========================================================
@@ -17,7 +16,6 @@ import plotly.graph_objects as go
 
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
-from sklearn.cluster import KMeans
 
 from xgboost import XGBClassifier
 
@@ -30,22 +28,26 @@ import networkx as nx
 st.set_page_config(
 
     page_title="Fusion Territorial Estratégica",
+
     layout="wide",
+
     initial_sidebar_state="expanded"
 
 )
 
 # =========================================================
-# ESTILO LIMPIO Y ESTABLE
+# CSS ESTABLE
 # =========================================================
 
 st.markdown("""
 
 <style>
 
+/* FONDO GENERAL */
+
 html, body, [class*="css"] {
 
-    background-color: #f5f7fb;
+    background-color: #f4f7fb;
     color: #1f2937;
     font-family: 'Segoe UI', sans-serif;
 }
@@ -53,11 +55,13 @@ html, body, [class*="css"] {
 /* TITULOS */
 
 h1 {
+
     color: #0f172a;
     font-weight: 800;
 }
 
-h2,h3,h4 {
+h2, h3, h4 {
+
     color: #1e3a8a;
 }
 
@@ -77,18 +81,11 @@ section[data-testid="stSidebar"] * {
     color: white !important;
 }
 
-/* ESPACIADO */
-
-.block-container {
-
-    padding-top: 2rem;
-}
-
 /* KPIs */
 
 [data-testid="metric-container"] {
 
-    background-color: white;
+    background: white;
 
     border-radius: 14px;
 
@@ -98,6 +95,13 @@ section[data-testid="stSidebar"] * {
 
     box-shadow:
         0 4px 12px rgba(0,0,0,0.06);
+}
+
+/* ESPACIADO */
+
+.block-container {
+
+    padding-top: 2rem;
 }
 
 /* DATAFRAME */
@@ -141,11 +145,11 @@ def leer_csv_seguro(ruta):
 
 def limpiar_columnas(df):
 
-    nuevas = []
+    columnas = []
 
     for col in df.columns:
 
-        nuevas.append(
+        columnas.append(
 
             str(col)
             .strip()
@@ -154,7 +158,7 @@ def limpiar_columnas(df):
             .replace("-", "_")
         )
 
-    df.columns = nuevas
+    df.columns = columnas
 
     return df
 
@@ -173,28 +177,26 @@ def detectar_columna(lista, dataframe):
     return None
 
 # =========================================================
-# CARGA DATOS
+# CARGA DE DATOS
 # =========================================================
 
 @st.cache_data
 def cargar_predictiva():
 
-    return limpiar_columnas(
-
-        leer_csv_seguro(
-            "riesgo_municipal.csv"
-        )
+    df_temp = leer_csv_seguro(
+        "riesgo_municipal.csv"
     )
+
+    return limpiar_columnas(df_temp)
 
 @st.cache_data
 def cargar_operacional():
 
-    return limpiar_columnas(
-
-        leer_csv_seguro(
-            "eventos_operacionales.csv"
-        )
+    df_temp = leer_csv_seguro(
+        "eventos_operacionales.csv"
     )
+
+    return limpiar_columnas(df_temp)
 
 df = cargar_predictiva()
 df_op = cargar_operacional()
@@ -218,10 +220,12 @@ if df.empty:
 COL_GAO = detectar_columna(
 
     [
+
         "GAO",
         "FG/BLOQUE/ESTRUCTURA",
         "FG_BLOQUE_ESTRUCTURA",
         "ESTRUCTURA"
+
     ],
 
     df_op
@@ -240,12 +244,14 @@ modulo = st.sidebar.radio(
     "Módulo Operacional",
 
     [
+
         "GEOINT",
         "IA PREDICTIVA",
         "PROSPECTIVA",
         "REDES",
         "ALERTAS",
         "OPERACIONAL"
+
     ]
 )
 
@@ -309,7 +315,7 @@ if anio_sel:
     ]
 
 # =========================================================
-# NUMERICOS
+# CONVERTIR NUMERICOS
 # =========================================================
 
 numericas = [
@@ -322,6 +328,7 @@ numericas = [
     'FREQ_HISTORICA',
     'DIV_TACTICA',
     'EVENTO_FUTURO'
+
 ]
 
 for col in numericas:
@@ -373,10 +380,10 @@ análisis prospectivo e IA predictiva operacional.
 """)
 
 # =========================================================
-# KPIS
+# KPIS LIMPIOS
 # =========================================================
 
-c1,c2,c3,c4 = st.columns(4)
+c1, c2, c3, c4 = st.columns(4)
 
 with c1:
 
@@ -415,7 +422,7 @@ with c4:
     )
 
 # =========================================================
-# MODULO GEOINT
+# GEOINT
 # =========================================================
 
 if modulo == "GEOINT":
@@ -448,11 +455,12 @@ if modulo == "GEOINT":
 
                 'RIESGO_EVOLUTIVO',
                 'GAO_PRESENTES'
+
             ],
 
             zoom=4,
 
-            height=550,
+            height=600,
 
             color_continuous_scale='Turbo'
         )
@@ -494,7 +502,7 @@ if modulo == "GEOINT":
 
             zoom=4,
 
-            height=550,
+            height=600,
 
             mapbox_style='carto-positron'
         )
@@ -510,12 +518,14 @@ if modulo == "GEOINT":
         )
 
         st.plotly_chart(
+
             fig_density,
+
             use_container_width=True
         )
 
 # =========================================================
-# MODULO IA
+# IA PREDICTIVA
 # =========================================================
 
 elif modulo == "IA PREDICTIVA":
@@ -578,12 +588,12 @@ elif modulo == "IA PREDICTIVA":
             )
 
             st.metric(
-                "Precisión Predictiva IA",
+                "Precisión IA",
                 round(acc,3)
             )
 
 # =========================================================
-# MODULO PROSPECTIVA
+# PROSPECTIVA
 # =========================================================
 
 elif modulo == "PROSPECTIVA":
@@ -626,7 +636,7 @@ elif modulo == "PROSPECTIVA":
 
         color_continuous_scale='Blues',
 
-        height=550
+        height=600
     )
 
     st.plotly_chart(
@@ -635,7 +645,7 @@ elif modulo == "PROSPECTIVA":
     )
 
 # =========================================================
-# MODULO REDES
+# REDES
 # =========================================================
 
 elif modulo == "REDES":
@@ -728,7 +738,7 @@ elif modulo == "REDES":
 
             template='plotly_white',
 
-            height=650,
+            height=700,
 
             showlegend=False
         )
@@ -739,7 +749,7 @@ elif modulo == "REDES":
         )
 
 # =========================================================
-# MODULO ALERTAS
+# ALERTAS
 # =========================================================
 
 elif modulo == "ALERTAS":
@@ -764,6 +774,7 @@ elif modulo == "ALERTAS":
                 'MUNICIPIO',
                 'RIESGO_EVOLUTIVO',
                 'PRIORIDAD_ESTRATEGICA'
+
             ]
         ],
 
@@ -771,7 +782,7 @@ elif modulo == "ALERTAS":
     )
 
 # =========================================================
-# MODULO OPERACIONAL
+# OPERACIONAL
 # =========================================================
 
 elif modulo == "OPERACIONAL":
@@ -836,7 +847,7 @@ elif modulo == "OPERACIONAL":
 
             color_continuous_scale='Blues',
 
-            height=550
+            height=600
         )
 
         st.plotly_chart(
