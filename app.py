@@ -1,6 +1,7 @@
 # =========================================================
 # CENTRO DE FUSIÓN GEOESPACIAL E INTELIGENCIA TERRITORIAL
-# VERSION ENTERPRISE REFINADA
+# VERSION FINAL OPERACIONAL ESTABLE
+# CORRECCION TOTAL UI + FRONTEND + RENDER
 # =========================================================
 
 # =========================================================
@@ -23,7 +24,7 @@ from xgboost import XGBClassifier
 import networkx as nx
 
 # =========================================================
-# CONFIG
+# CONFIGURACION
 # =========================================================
 
 st.set_page_config(
@@ -35,7 +36,7 @@ st.set_page_config(
 )
 
 # =========================================================
-# ESTILO ENTERPRISE
+# ESTILO LIMPIO Y ESTABLE
 # =========================================================
 
 st.markdown("""
@@ -43,7 +44,8 @@ st.markdown("""
 <style>
 
 html, body, [class*="css"] {
-    background-color: #f4f7fb;
+
+    background-color: #f5f7fb;
     color: #1f2937;
     font-family: 'Segoe UI', sans-serif;
 }
@@ -52,111 +54,57 @@ html, body, [class*="css"] {
 
 h1 {
     color: #0f172a;
-    font-size: 42px;
     font-weight: 800;
 }
 
-h2, h3, h4 {
+h2,h3,h4 {
     color: #1e3a8a;
-    font-weight: 700;
 }
 
 /* SIDEBAR */
 
 section[data-testid="stSidebar"] {
+
     background: linear-gradient(
         180deg,
         #0f172a 0%,
         #111827 100%
     );
-
-    border-right: 1px solid #1e293b;
 }
 
 section[data-testid="stSidebar"] * {
+
     color: white !important;
 }
 
-/* KPI CARDS */
-
-.kpi-card {
-
-    background: white;
-
-    padding: 20px;
-
-    border-radius: 18px;
-
-    box-shadow:
-        0 4px 14px rgba(0,0,0,0.08);
-
-    border-left: 6px solid #2563eb;
-
-    margin-bottom: 10px;
-}
-
-.kpi-title {
-    font-size: 14px;
-    color: #64748b;
-    font-weight: 600;
-}
-
-.kpi-value {
-    font-size: 34px;
-    font-weight: 800;
-    color: #0f172a;
-}
-
-/* BLOQUES */
+/* ESPACIADO */
 
 .block-container {
-    padding-top: 1.5rem;
-    padding-left: 2rem;
-    padding-right: 2rem;
+
+    padding-top: 2rem;
+}
+
+/* KPIs */
+
+[data-testid="metric-container"] {
+
+    background-color: white;
+
+    border-radius: 14px;
+
+    padding: 15px;
+
+    border-left: 5px solid #2563eb;
+
+    box-shadow:
+        0 4px 12px rgba(0,0,0,0.06);
 }
 
 /* DATAFRAME */
 
 [data-testid="stDataFrame"] {
+
     border-radius: 12px;
-}
-
-/* ALERTAS */
-
-.alerta-critica {
-
-    background: #fee2e2;
-    color: #991b1b;
-
-    padding: 12px;
-
-    border-radius: 10px;
-
-    margin-bottom: 10px;
-}
-
-.alerta-media {
-
-    background: #fef3c7;
-    color: #92400e;
-
-    padding: 12px;
-
-    border-radius: 10px;
-
-    margin-bottom: 10px;
-}
-
-.alerta-baja {
-
-    background: #dcfce7;
-    color: #166534;
-
-    padding: 12px;
-
-    border-radius: 10px;
-
-    margin-bottom: 10px;
 }
 
 </style>
@@ -264,7 +212,7 @@ if df.empty:
     st.stop()
 
 # =========================================================
-# DETECCION COLUMNAS
+# DETECTAR COLUMNA GAO
 # =========================================================
 
 COL_GAO = detectar_columna(
@@ -391,35 +339,22 @@ for col in numericas:
 # INDICES
 # =========================================================
 
-df_filtrado['IPE'] = (
-
-    df_filtrado['RIESGO'] * 0.30 +
-
-    df_filtrado['IET'] * 0.25 +
-
-    df_filtrado['EVENTOS'] * 0.20 +
-
-    df_filtrado['UNIDADES_EXPUESTAS'] * 0.15 +
-
-    df_filtrado['GAO_PRESENTES'] * 0.10
-)
-
 df_filtrado['RIESGO_EVOLUTIVO'] = (
 
-    df_filtrado['IPE'] * 0.60 +
+    df_filtrado['RIESGO'] * 0.40 +
 
-    df_filtrado['EVENTOS'] * 0.25 +
+    df_filtrado['EVENTOS'] * 0.30 +
 
-    df_filtrado['GAO_PRESENTES'] * 0.15
+    df_filtrado['GAO_PRESENTES'] * 0.20 +
+
+    df_filtrado['UNIDADES_EXPUESTAS'] * 0.10
 )
 
 df_filtrado['PRIORIDAD_ESTRATEGICA'] = (
 
-    df_filtrado['RIESGO_EVOLUTIVO'] * 0.5 +
+    df_filtrado['RIESGO_EVOLUTIVO'] * 0.60 +
 
-    df_filtrado['UNIDADES_EXPUESTAS'] * 0.3 +
-
-    df_filtrado['GAO_PRESENTES'] * 0.2
+    df_filtrado['IET'] * 0.40
 )
 
 # =========================================================
@@ -431,90 +366,56 @@ st.title(
 )
 
 st.markdown("""
-Plataforma integrada de inteligencia territorial, análisis prospectivo,
-IA predictiva y monitoreo operacional estratégico.
+
+Plataforma integrada de inteligencia territorial,
+análisis prospectivo e IA predictiva operacional.
+
 """)
 
 # =========================================================
-# KPI SECTION
+# KPIS
 # =========================================================
 
-col1,col2,col3,col4 = st.columns(4)
+c1,c2,c3,c4 = st.columns(4)
 
-with col1:
+with c1:
 
-    st.markdown(f"""
+    st.metric(
 
-    <div class="kpi-card">
+        "Municipios",
 
-        <div class="kpi-title">
-        Municipios Monitoreados
-        </div>
+        int(df_filtrado['MUNICIPIO'].nunique())
+    )
 
-        <div class="kpi-value">
-        {df_filtrado['MUNICIPIO'].nunique()}
-        </div>
+with c2:
 
-    </div>
+    st.metric(
 
-    """, unsafe_allow_html=True)
+        "Eventos",
 
-with col2:
+        int(df_filtrado['EVENTOS'].sum())
+    )
 
-    st.markdown(f"""
+with c3:
 
-    <div class="kpi-card">
+    st.metric(
 
-        <div class="kpi-title">
-        Eventos Detectados
-        </div>
+        "Riesgo Evolutivo",
 
-        <div class="kpi-value">
-        {int(df_filtrado['EVENTOS'].sum())}
-        </div>
+        round(df_filtrado['RIESGO_EVOLUTIVO'].mean(),2)
+    )
 
-    </div>
+with c4:
 
-    """, unsafe_allow_html=True)
+    st.metric(
 
-with col3:
+        "Prioridad Estratégica",
 
-    st.markdown(f"""
-
-    <div class="kpi-card">
-
-        <div class="kpi-title">
-        Riesgo Evolutivo
-        </div>
-
-        <div class="kpi-value">
-        {round(df_filtrado['RIESGO_EVOLUTIVO'].mean(),2)}
-        </div>
-
-    </div>
-
-    """, unsafe_allow_html=True)
-
-with col4:
-
-    st.markdown(f"""
-
-    <div class="kpi-card">
-
-        <div class="kpi-title">
-        Prioridad Estratégica
-        </div>
-
-        <div class="kpi-value">
-        {round(df_filtrado['PRIORIDAD_ESTRATEGICA'].mean(),2)}
-        </div>
-
-    </div>
-
-    """, unsafe_allow_html=True)
+        round(df_filtrado['PRIORIDAD_ESTRATEGICA'].mean(),2)
+    )
 
 # =========================================================
-# GEOINT
+# MODULO GEOINT
 # =========================================================
 
 if modulo == "GEOINT":
@@ -534,6 +435,7 @@ if modulo == "GEOINT":
             df_filtrado,
 
             lat='LATITUD',
+
             lon='LONGITUD',
 
             color='PRIORIDAD_ESTRATEGICA',
@@ -550,7 +452,7 @@ if modulo == "GEOINT":
 
             zoom=4,
 
-            height=650,
+            height=550,
 
             color_continuous_scale='Turbo'
         )
@@ -568,12 +470,52 @@ if modulo == "GEOINT":
         )
 
         st.plotly_chart(
+
             fig_map,
+
+            use_container_width=True
+        )
+
+        st.subheader(
+            "Mapa Densidad Territorial"
+        )
+
+        fig_density = px.density_mapbox(
+
+            df_filtrado,
+
+            lat='LATITUD',
+
+            lon='LONGITUD',
+
+            z='RIESGO_EVOLUTIVO',
+
+            radius=25,
+
+            zoom=4,
+
+            height=550,
+
+            mapbox_style='carto-positron'
+        )
+
+        fig_density.update_layout(
+
+            margin=dict(
+                l=0,
+                r=0,
+                t=0,
+                b=0
+            )
+        )
+
+        st.plotly_chart(
+            fig_density,
             use_container_width=True
         )
 
 # =========================================================
-# IA
+# MODULO IA
 # =========================================================
 
 elif modulo == "IA PREDICTIVA":
@@ -641,7 +583,7 @@ elif modulo == "IA PREDICTIVA":
             )
 
 # =========================================================
-# PROSPECTIVA
+# MODULO PROSPECTIVA
 # =========================================================
 
 elif modulo == "PROSPECTIVA":
@@ -693,7 +635,7 @@ elif modulo == "PROSPECTIVA":
     )
 
 # =========================================================
-# REDES
+# MODULO REDES
 # =========================================================
 
 elif modulo == "REDES":
@@ -741,7 +683,7 @@ elif modulo == "REDES":
             mode='lines',
 
             line=dict(
-                width=0.6,
+                width=0.5,
                 color='#94a3b8'
             ),
 
@@ -772,7 +714,7 @@ elif modulo == "REDES":
             textposition="top center",
 
             marker=dict(
-                size=11,
+                size=10,
                 color='#2563eb'
             )
         )
@@ -786,7 +728,7 @@ elif modulo == "REDES":
 
             template='plotly_white',
 
-            height=700,
+            height=650,
 
             showlegend=False
         )
@@ -797,7 +739,7 @@ elif modulo == "REDES":
         )
 
 # =========================================================
-# ALERTAS
+# MODULO ALERTAS
 # =========================================================
 
 elif modulo == "ALERTAS":
@@ -806,47 +748,30 @@ elif modulo == "ALERTAS":
         "Alertas Inteligentes"
     )
 
-    top_alertas = df_filtrado.sort_values(
+    alertas = df_filtrado.sort_values(
 
         by='PRIORIDAD_ESTRATEGICA',
         ascending=False
 
-    ).head(10)
+    ).head(15)
 
-    for _, row in top_alertas.iterrows():
+    st.dataframe(
 
-        riesgo = row['PRIORIDAD_ESTRATEGICA']
+        alertas[
+            [
 
-        if riesgo >= 5:
+                'DEPARTAMENTO',
+                'MUNICIPIO',
+                'RIESGO_EVOLUTIVO',
+                'PRIORIDAD_ESTRATEGICA'
+            ]
+        ],
 
-            clase = "alerta-critica"
-
-        elif riesgo >= 3:
-
-            clase = "alerta-media"
-
-        else:
-
-            clase = "alerta-baja"
-
-        st.markdown(f"""
-
-        <div class="{clase}">
-
-        <strong>{row['MUNICIPIO']}</strong><br>
-
-        Riesgo Evolutivo:
-        {round(row['RIESGO_EVOLUTIVO'],2)}<br>
-
-        Prioridad Estratégica:
-        {round(row['PRIORIDAD_ESTRATEGICA'],2)}
-
-        </div>
-
-        """, unsafe_allow_html=True)
+        use_container_width=True
+    )
 
 # =========================================================
-# OPERACIONAL
+# MODULO OPERACIONAL
 # =========================================================
 
 elif modulo == "OPERACIONAL":
